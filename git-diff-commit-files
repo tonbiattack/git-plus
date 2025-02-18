@@ -1,0 +1,38 @@
+#!/bin/bash
+
+COMMIT_HASH=$1
+
+if [ -z "$COMMIT_HASH" ]; then
+  echo "使い方: git diff-commit-files {コミットハッシュ}"
+  exit 1
+fi
+
+# 出力ディレクトリ（コミットハッシュ名）を作成
+OUTPUT_DIR="diff_output_${COMMIT_HASH}"
+mkdir -p "$OUTPUT_DIR"
+
+# 該当コミットで変更されたファイル一覧取得
+CHANGED_FILES=$(git diff-tree --no-commit-id --name-only -r $COMMIT_HASH)
+
+if [ -z "$CHANGED_FILES" ]; then
+  echo "変更されたファイルがありません。"
+  exit 0
+fi
+
+echo "コミット $COMMIT_HASH で変更されたファイル一覧:"
+echo "$CHANGED_FILES"
+echo
+
+# 各ファイルごとに差分を出力
+for FILE in $CHANGED_FILES; do
+  # ファイルパスを_に変換（Windows対策）
+  SAFE_FILE_NAME="${FILE//\//_}"
+  OUTPUT_FILE="${OUTPUT_DIR}/${COMMIT_HASH}_${SAFE_FILE_NAME}.diff"
+
+  # 差分取得して出力
+  git diff ${COMMIT_HASH}^ ${COMMIT_HASH} -- "$FILE" > "$OUTPUT_FILE"
+
+  echo "出力: $OUTPUT_FILE"
+done
+
+echo "すべての差分ファイルを ${OUTPUT_DIR} に出力しました。"

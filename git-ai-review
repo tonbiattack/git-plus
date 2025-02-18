@@ -1,0 +1,16 @@
+#!/bin/bash
+
+OUTPUT_FILE="ai_review_diff.txt"
+
+# ステージング済み or 未コミットの変更を取得
+git diff HEAD > "$OUTPUT_FILE"
+
+if [ ! -s "$OUTPUT_FILE" ]; then
+  echo "変更されたコードがありません。"
+  rm "$OUTPUT_FILE"
+  exit 0
+fi
+
+echo "変更内容を $OUTPUT_FILE に出力しました。"
+
+

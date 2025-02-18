@@ -1,0 +1,4 @@
+#!/bin/bash
+
+git reset --soft HEAD^
+echo "最後のコミットを取り消しました（変更は残っています）"

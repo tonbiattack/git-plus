@@ -1,0 +1,22 @@
+#!/bin/bash
+
+TAG_NAME=$1
+
+if [ -z "$TAG_NAME" ]; then
+  echo "タグ名を指定してください。"
+  exit 1
+fi
+
+# ローカルタグ削除
+git tag -d $TAG_NAME
+
+# リモートタグ削除
+git push --delete origin $TAG_NAME
+
+# 最新コミットにタグ付け直し
+git tag $TAG_NAME
+
+# リモートにタグをプッシュ
+git push origin $TAG_NAME
+
+echo "タグ $TAG_NAME をリセットして再作成しました。"

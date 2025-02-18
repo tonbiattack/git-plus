@@ -1,0 +1,16 @@
+#!/bin/bash
+
+BRANCH_NAME=$1
+
+if [ -z "$BRANCH_NAME" ]; then
+  echo "ブランチ名を指定してください。"
+  exit 1
+fi
+
+# ローカルブランチ削除（マージ済みのみ削除）
+git branch -D $BRANCH_NAME
+
+# 新規ブランチ作成＆チェックアウト
+git checkout -b $BRANCH_NAME
+
+echo "ブランチ $BRANCH_NAME を作成しました。"

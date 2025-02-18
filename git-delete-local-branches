@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# マージ済みで残したいブランチ以外を取得
+branches=$(git branch --merged | grep -v "\*" | grep -v "main" | grep -v "master" | grep -v "develop")
+
+if [ -z "$branches" ]; then
+  echo "削除対象のブランチはありません。"
+  exit 0
+fi
+
+echo "以下のブランチを削除します:"
+echo "$branches"
+
+read -p "本当に削除しますか？ (y/N): " confirm
+
+if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
+  echo "$branches" | xargs -n 1 git branch -d
+  echo "削除しました。"
+else
+  echo "キャンセルしました。"
+fi
