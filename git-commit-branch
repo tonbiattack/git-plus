@@ -1,0 +1,41 @@
+#!/bin/bash
+
+# 現在のブランチ名を取得
+BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
+
+# ステージング状態確認
+if ! git diff --cached --quiet; then
+  # 何かステージングされている → 続行
+  :
+else
+  echo "ステージングされているファイルがありません。'git add {ファイル名}' などで追加してください。"
+  exit 1
+fi
+
+if [ -n "$1" ]; then
+  # 引数あり → 一行メッセージとして即コミット
+  FINAL_MESSAGE="${BRANCH_NAME} $*"
+else
+  # 引数なし → エディタ入力
+  TEMP_FILE=$(mktemp)
+  ${EDITOR:-vi} "$TEMP_FILE"
+
+  # メッセージ取得＆空チェック
+  COMMIT_MESSAGE=$(cat "$TEMP_FILE")
+  rm "$TEMP_FILE"
+
+  # 空チェック（スペース・改行のみもNG）
+  if [ -z "$(echo "$COMMIT_MESSAGE" | tr -d '[:space:]')" ]; then
+    echo "コミットメッセージが空のため終了します"
+    exit 1
+  fi
+
+  # 改行除去して結合
+  COMMIT_MESSAGE=$(echo -n "$COMMIT_MESSAGE" | sed 's/[[:space:]]*$//')
+  FINAL_MESSAGE="${BRANCH_NAME} ${COMMIT_MESSAGE}"
+fi
+
+# コミット実行
+git commit -m "$FINAL_MESSAGE"
+
+echo "コミットメッセージを '${FINAL_MESSAGE}' で登録しました"

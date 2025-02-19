@@ -1,0 +1,10 @@
+#!/bin/bash
+
+NUM=$1
+
+if [ -z "$NUM" ]; then
+  echo "使い方: git squash {まとめたいコミット数}"
+  exit 1
+fi
+
+git rebase -i HEAD~$NUM
