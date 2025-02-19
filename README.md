@@ -91,7 +91,7 @@ chmod +x {ファイル名}
 ## フォルダの設定
 
 ```
-echo 'export PATH="$PATH:/c/apps/Command"' >> ~/.bashrc
+echo 'export PATH="$PATH:/c/apps/git-plus"' >> ~/.bashrc
 source ~/.bashrc
 ```
 
