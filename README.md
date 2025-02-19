@@ -73,6 +73,13 @@ git checkout -b {branch_name}
 
 ---
 
+### git checkout pull {branch_name}
+
+```
+git checkout {branch_name}
+git pull
+```
+
 ## 権限付与
 
 ```

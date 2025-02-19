@@ -1,0 +1,18 @@
+#!/bin/bash
+
+BRANCH_NAME=$1
+
+if [ -z "$BRANCH_NAME" ]; then
+  echo "ブランチ名を指定してください。"
+  exit 1
+fi
+
+git checkout "$BRANCH_NAME"
+
+if [ $? -eq 0 ]; then
+  echo "ブランチ $BRANCH_NAME に切り替えました。最新状態を取得します..."
+  git pull
+else
+  echo "ブランチの切り替えに失敗しました。"
+  exit 1
+fi
