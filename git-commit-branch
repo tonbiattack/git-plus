@@ -14,7 +14,7 @@ fi
 
 if [ -n "$1" ]; then
   # 引数あり → 一行メッセージとして即コミット
-  FINAL_MESSAGE="${BRANCH_NAME} $*"
+  FINAL_MESSAGE="${BRANCH_NAME} $(echo "$*" | sed 's/ /\n/g')"
 else
   # 引数なし → エディタ入力
   TEMP_FILE=$(mktemp)
