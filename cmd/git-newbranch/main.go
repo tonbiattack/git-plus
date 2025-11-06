@@ -23,15 +23,27 @@ func main() {
 	}
 
 	if exists {
-		proceed, err := askForConfirmation(branch)
+		action, err := askForAction(branch)
 		if err != nil {
 			fmt.Println("入力の読み込みに失敗しました:", err)
 			os.Exit(1)
 		}
-		if !proceed {
+		if action == "cancel" {
 			fmt.Println("処理を中止しました。")
 			return
 		}
+		if action == "switch" {
+			switchCmd := exec.Command("git", "checkout", branch)
+			switchCmd.Stdout = os.Stdout
+			switchCmd.Stderr = os.Stderr
+			if err := switchCmd.Run(); err != nil {
+				fmt.Println("ブランチの切り替えに失敗しました:", err)
+				os.Exit(1)
+			}
+			fmt.Printf("ブランチ %s に切り替えました。\n", branch)
+			return
+		}
+		// action == "recreate" の場合は下に続く
 	}
 
 	delCmd := exec.Command("git", "branch", "-D", branch)
@@ -67,19 +79,28 @@ func branchExists(name string) (bool, error) {
 	return true, nil
 }
 
-func askForConfirmation(branch string) (bool, error) {
-	fmt.Printf("ブランチ %s は既に存在します。削除して作り直しますか？ [y/N]: ", branch)
+func askForAction(branch string) (string, error) {
+	fmt.Printf("ブランチ %s は既に存在します。どうしますか？ [r]ecreate/[s]witch/[c]ancel (r/s/c): ", branch)
 	reader := bufio.NewReader(os.Stdin)
 	input, err := reader.ReadString('\n')
 	if err != nil {
 		if err == io.EOF {
-			input = ""
+			input = "c"
 		} else {
-			return false, err
+			return "", err
 		}
 	}
 	answer := strings.ToLower(strings.TrimSpace(input))
-	return answer == "y" || answer == "yes", nil
+	switch answer {
+	case "r", "recreate":
+		return "recreate", nil
+	case "s", "switch":
+		return "switch", nil
+	case "c", "cancel", "":
+		return "cancel", nil
+	default:
+		return "cancel", nil
+	}
 }
 
 func isNotFound(err error) bool {
