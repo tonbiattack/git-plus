@@ -17,12 +17,12 @@ Git の日常操作を少しだけ楽にするためのカスタムコマンド�
 Go 1.22 以降がインストールされていれば、以下のコマンドだけで導入できます。
 
 ```bash
-go install github.com/tonbiattack/git-plus-go/cmd/git-newbranch@latest
-go install github.com/tonbiattack/git-plus-go/cmd/git-reset-tag@latest
-go install github.com/tonbiattack/git-plus-go/cmd/git-amend@latest
-go install github.com/tonbiattack/git-plus-go/cmd/git-squash@latest
-go install github.com/tonbiattack/git-plus-go/cmd/git-delete-local-branches@latest
-go install github.com/tonbiattack/git-plus-go/cmd/git-undo-last-commit@latest
+go install github.com/tonbiattack/git-plus/cmd/git-newbranch@latest
+go install github.com/tonbiattack/git-plus/cmd/git-reset-tag@latest
+go install github.com/tonbiattack/git-plus/cmd/git-amend@latest
+go install github.com/tonbiattack/git-plus/cmd/git-squash@latest
+go install github.com/tonbiattack/git-plus/cmd/git-delete-local-branches@latest
+go install github.com/tonbiattack/git-plus/cmd/git-undo-last-commit@latest
 ```
 
 `@latest` で解決できない場合（モジュールプロキシの都合など）には、`@main` を指定するとリポジトリの最新コミットを直接取得できます。
@@ -57,8 +57,8 @@ git newbranch feature/awesome
 リポジトリをクローンしている場合は、`go install` を使わなくてもローカルでそのままビルド・実行できます。
 
 ```bash
-git clone git@github.com:tonbiattack/git-plus-go.git
-cd git-plus-go
+git clone git@github.com:tonbiattack/git-plus.git
+cd git-plus
 go build -o ./bin/git-newbranch ./cmd/git-newbranch
 go build -o ./bin/git-reset-tag ./cmd/git-reset-tag
 go build -o ./bin/git-amend ./cmd/git-amend
