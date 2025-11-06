@@ -80,24 +80,22 @@ func branchExists(name string) (bool, error) {
 }
 
 func askForAction(branch string) (string, error) {
-	fmt.Printf("ブランチ %s は既に存在します。どうしますか？ [r]ecreate/[s]witch/[c]ancel (r/s/c): ", branch)
+	fmt.Printf("ブランチ %s は既に存在します。再作成しますか？ (y/n): ", branch)
 	reader := bufio.NewReader(os.Stdin)
 	input, err := reader.ReadString('\n')
 	if err != nil {
 		if err == io.EOF {
-			input = "c"
+			input = "y"
 		} else {
 			return "", err
 		}
 	}
 	answer := strings.ToLower(strings.TrimSpace(input))
 	switch answer {
-	case "r", "recreate":
+	case "y", "yes", "":
 		return "recreate", nil
-	case "s", "switch":
+	case "n", "no":
 		return "switch", nil
-	case "c", "cancel", "":
-		return "cancel", nil
 	default:
 		return "cancel", nil
 	}
