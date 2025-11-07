@@ -98,25 +98,71 @@ Windows で PowerShell を利用している場合は、`./bin/git-newbranch` �
 
 `go install` で配置したバイナリは、既定では `go env GOBIN`（未設定時は `$(go env GOPATH)/bin`）に保存されます。不要になった場合は、配置先からバイナリを削除してください。
 
+### バイナリのみ削除（通常のアンインストール）
+
+**Linux / macOS:**
+
 ```bash
-rm $(go env GOBIN)/git-newbranch
-rm $(go env GOBIN)/git-reset-tag
-rm $(go env GOBIN)/git-track
-rm $(go env GOBIN)/git-delete-local-branches
-rm $(go env GOBIN)/git-undo-last-commit
-rm $(go env GOBIN)/git-tag-diff
+rm $(go env GOPATH)/bin/git-newbranch
+rm $(go env GOPATH)/bin/git-reset-tag
+rm $(go env GOPATH)/bin/git-amend
+rm $(go env GOPATH)/bin/git-squash
+rm $(go env GOPATH)/bin/git-track
+rm $(go env GOPATH)/bin/git-delete-local-branches
+rm $(go env GOPATH)/bin/git-undo-last-commit
+rm $(go env GOPATH)/bin/git-tag-diff
 ```
 
-PowerShell を利用している場合は、以下のように拡張子付きで削除できます。
+**Windows (PowerShell):**
 
 ```powershell
-Remove-Item (go env GOBIN)\git-newbranch.exe
-Remove-Item (go env GOBIN)\git-reset-tag.exe
-Remove-Item (go env GOBIN)\git-track.exe
-Remove-Item (go env GOBIN)\git-delete-local-branches.exe
-Remove-Item (go env GOBIN)\git-undo-last-commit.exe
-Remove-Item (go env GOBIN)\git-tag-diff.exe
+Remove-Item "$env:GOPATH\bin\git-newbranch.exe"
+Remove-Item "$env:GOPATH\bin\git-reset-tag.exe"
+Remove-Item "$env:GOPATH\bin\git-amend.exe"
+Remove-Item "$env:GOPATH\bin\git-squash.exe"
+Remove-Item "$env:GOPATH\bin\git-track.exe"
+Remove-Item "$env:GOPATH\bin\git-delete-local-branches.exe"
+Remove-Item "$env:GOPATH\bin\git-undo-last-commit.exe"
+Remove-Item "$env:GOPATH\bin\git-tag-diff.exe"
 ```
+
+### go install で更新されない場合の対処法
+
+`go install` を再実行しても最新版に更新されない場合は、Go のモジュールキャッシュが原因の可能性があります。以下の方法で解決できます。
+
+#### 1. 対象パッケージのキャッシュのみ削除（推奨）
+
+**Linux / macOS:**
+
+```bash
+rm -rf $(go env GOMODCACHE)/github.com/tonbiattack/git-plus*
+```
+
+**Windows (PowerShell):**
+
+```powershell
+Remove-Item -Recurse -Force "$env:GOMODCACHE\github.com\tonbiattack\git-plus*"
+```
+
+削除後、再度 `go install` を実行してください。
+
+#### 2. すべてのモジュールキャッシュを削除（影響範囲が大きい）
+
+```bash
+go clean -modcache
+```
+
+このコマンドは `$GOMODCACHE`（通常は `$GOPATH/pkg/mod`）配下のすべてのキャッシュを削除します。他のパッケージにも影響するため、必要な場合のみ実行してください。
+
+### まとめ
+
+| 目的 | コマンド例 |
+|-----|----------|
+| バイナリのみ削除（通常のアンインストール） | `rm $(go env GOPATH)/bin/git-*` |
+| 対象パッケージのキャッシュ削除（更新されない時） | `rm -rf $(go env GOMODCACHE)/github.com/tonbiattack/git-plus*` |
+| すべてのキャッシュ削除 | `go clean -modcache` |
+
+💡 **補足**: `go install` にはアンインストールコマンドは存在しません。バイナリを直接削除するだけでアンインストールできます。
 
 ## 使い方
 
