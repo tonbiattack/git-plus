@@ -9,6 +9,7 @@ Git の日常操作を少しだけ楽にするためのカスタムコマンド�
 - `git track`：現在のブランチにトラッキングブランチを設定します。`git pull` でエラーが出る場合に便利です。
 - `git delete-local-branches`：`main` / `master` / `develop` 以外のマージ済みローカルブランチをまとめて削除します。
 - `git undo-last-commit`：直近のコミットを取り消し、変更内容をステージング状態のまま残します。
+- `git tag-diff`：2つのタグ間の差分を取得し、課題IDを抽出してファイルに出力します。リリースノート作成に便利です。
 
 どれも `git-xxx` という名前のバイナリを用意することで、`git xxx` として呼び出せる Git 拡張サブコマンドです。
 
@@ -24,6 +25,7 @@ go install github.com/tonbiattack/git-plus/cmd/git-squash@latest
 go install github.com/tonbiattack/git-plus/cmd/git-track@latest
 go install github.com/tonbiattack/git-plus/cmd/git-delete-local-branches@latest
 go install github.com/tonbiattack/git-plus/cmd/git-undo-last-commit@latest
+go install github.com/tonbiattack/git-plus/cmd/git-tag-diff@latest
 ```
 
 `@latest` で解決できない場合（モジュールプロキシの都合など）には、`@main` を指定するとリポジトリの最新コミットを直接取得できます。
@@ -42,6 +44,7 @@ go build -o ~/bin/git-squash ./cmd/git-squash
 go build -o ~/bin/git-track ./cmd/git-track
 go build -o ~/bin/git-delete-local-branches ./cmd/git-delete-local-branches
 go build -o ~/bin/git-undo-last-commit ./cmd/git-undo-last-commit
+go build -o ~/bin/git-tag-diff ./cmd/git-tag-diff
 export PATH=$PATH:~/bin
 git newbranch feature/awesome
 ```
@@ -68,6 +71,7 @@ go build -o ./bin/git-squash ./cmd/git-squash
 go build -o ./bin/git-track ./cmd/git-track
 go build -o ./bin/git-delete-local-branches ./cmd/git-delete-local-branches
 go build -o ./bin/git-undo-last-commit ./cmd/git-undo-last-commit
+go build -o ./bin/git-tag-diff ./cmd/git-tag-diff
 ./bin/git-newbranch feature/awesome
 ./bin/git-reset-tag v1.2.3
 ```
@@ -82,6 +86,7 @@ go run ./cmd/git-squash 3
 go run ./cmd/git-track
 go run ./cmd/git-delete-local-branches
 go run ./cmd/git-undo-last-commit
+go run ./cmd/git-tag-diff V4.2.00.00 V4.3.00.00
 ```
 
 Windows で PowerShell を利用している場合は、`./bin/git-newbranch` の代わりに `.\bin\git-newbranch.exe` のようにパスを指定してください。
@@ -99,6 +104,7 @@ rm $(go env GOBIN)/git-reset-tag
 rm $(go env GOBIN)/git-track
 rm $(go env GOBIN)/git-delete-local-branches
 rm $(go env GOBIN)/git-undo-last-commit
+rm $(go env GOBIN)/git-tag-diff
 ```
 
 PowerShell を利用している場合は、以下のように拡張子付きで削除できます。
@@ -109,6 +115,7 @@ Remove-Item (go env GOBIN)\git-reset-tag.exe
 Remove-Item (go env GOBIN)\git-track.exe
 Remove-Item (go env GOBIN)\git-delete-local-branches.exe
 Remove-Item (go env GOBIN)\git-undo-last-commit.exe
+Remove-Item (go env GOBIN)\git-tag-diff.exe
 ```
 
 ## 使い方
@@ -198,6 +205,19 @@ git undo-last-commit
 
 1. `git reset --soft HEAD^` を実行し、直近のコミットだけを取り消します。
 2. 作業ツリーとステージング内容はそのまま残るため、コミットメッセージを修正したいときや再コミットしたいときに便利です。
+
+### git tag-diff
+
+```bash
+git tag-diff V4.2.00.00 V4.3.00.00
+```
+
+1. 2つのタグ間のコミット差分を取得します。
+2. Mergeコミットは自動的に除外されます（`--no-merges`オプション使用）。
+3. 出力形式は `- コミットメッセージ (作成者名)` です。
+4. 出力ファイル名は自動的に `tag_diff_<旧タグ>_to_<新タグ>.txt` として生成されます。
+
+指定したタグが存在しない場合や、タグ間に差分がない場合は適切なメッセージを表示します。
 
 ## 開発メモ
 
