@@ -6,7 +6,7 @@ Git の日常操作を少しだけ楽にするためのカスタムコマンド�
 - `git reset-tag`：指定したタグをローカルとリモートから削除し、最新コミットに再作成して再プッシュします。
 - `git amend`：直前のコミットを `git commit --amend` で再編集します。追加のオプションはそのまま渡せます。
 - `git squash`：直近の複数コミットを対話的にスカッシュします。引数なしで実行すると最近のコミットを表示して選択できます。
-
+- `git track`：現在のブランチにトラッキングブランチを設定します。`git pull` でエラーが出る場合に便利です。
 - `git delete-local-branches`：`main` / `master` / `develop` 以外のマージ済みローカルブランチをまとめて削除します。
 - `git undo-last-commit`：直近のコミットを取り消し、変更内容をステージング状態のまま残します。
 
@@ -21,6 +21,7 @@ go install github.com/tonbiattack/git-plus/cmd/git-newbranch@latest
 go install github.com/tonbiattack/git-plus/cmd/git-reset-tag@latest
 go install github.com/tonbiattack/git-plus/cmd/git-amend@latest
 go install github.com/tonbiattack/git-plus/cmd/git-squash@latest
+go install github.com/tonbiattack/git-plus/cmd/git-track@latest
 go install github.com/tonbiattack/git-plus/cmd/git-delete-local-branches@latest
 go install github.com/tonbiattack/git-plus/cmd/git-undo-last-commit@latest
 ```
@@ -38,6 +39,7 @@ go build -o ~/bin/git-newbranch ./cmd/git-newbranch
 go build -o ~/bin/git-reset-tag ./cmd/git-reset-tag
 go build -o ~/bin/git-amend ./cmd/git-amend
 go build -o ~/bin/git-squash ./cmd/git-squash
+go build -o ~/bin/git-track ./cmd/git-track
 go build -o ~/bin/git-delete-local-branches ./cmd/git-delete-local-branches
 go build -o ~/bin/git-undo-last-commit ./cmd/git-undo-last-commit
 export PATH=$PATH:~/bin
@@ -63,6 +65,7 @@ go build -o ./bin/git-newbranch ./cmd/git-newbranch
 go build -o ./bin/git-reset-tag ./cmd/git-reset-tag
 go build -o ./bin/git-amend ./cmd/git-amend
 go build -o ./bin/git-squash ./cmd/git-squash
+go build -o ./bin/git-track ./cmd/git-track
 go build -o ./bin/git-delete-local-branches ./cmd/git-delete-local-branches
 go build -o ./bin/git-undo-last-commit ./cmd/git-undo-last-commit
 ./bin/git-newbranch feature/awesome
@@ -76,6 +79,7 @@ go run ./cmd/git-newbranch feature/awesome
 go run ./cmd/git-reset-tag v1.2.3
 go run ./cmd/git-amend --no-edit
 go run ./cmd/git-squash 3
+go run ./cmd/git-track
 go run ./cmd/git-delete-local-branches
 go run ./cmd/git-undo-last-commit
 ```
@@ -92,6 +96,7 @@ Windows で PowerShell を利用している場合は、`./bin/git-newbranch` �
 ```bash
 rm $(go env GOBIN)/git-newbranch
 rm $(go env GOBIN)/git-reset-tag
+rm $(go env GOBIN)/git-track
 rm $(go env GOBIN)/git-delete-local-branches
 rm $(go env GOBIN)/git-undo-last-commit
 ```
@@ -101,6 +106,7 @@ PowerShell を利用している場合は、以下のように拡張子付きで
 ```powershell
 Remove-Item (go env GOBIN)\git-newbranch.exe
 Remove-Item (go env GOBIN)\git-reset-tag.exe
+Remove-Item (go env GOBIN)\git-track.exe
 Remove-Item (go env GOBIN)\git-delete-local-branches.exe
 Remove-Item (go env GOBIN)\git-undo-last-commit.exe
 ```
@@ -168,6 +174,21 @@ git delete-local-branches
 1. `git branch --merged` に含まれ、`main` / `master` / `develop` 以外のブランチを抽出します。
 2. 削除候補を一覧表示し、確認プロンプトで `y` / `yes` が入力されたときのみ削除します。
 3. 各ブランチを `git branch -d` で削除します。未統合で削除できなかった場合はエラーを表示し、処理結果を通知します。
+
+### git track
+
+```bash
+git track                    # origin/<現在のブランチ名> をトラッキング
+git track upstream           # upstream/<現在のブランチ名> をトラッキング
+git track origin feature-123 # origin/feature-123 をトラッキング
+```
+
+1. 引数なしで実行すると、現在のブランチに対して `origin/<現在のブランチ名>` をトラッキングブランチとして設定します。
+2. リモート名を指定すると、そのリモートの同名ブランチをトラッキングします（例: `upstream`）。
+3. リモート名とブランチ名の両方を指定すると、そのリモートブランチをトラッキングします。
+4. 指定したリモートブランチが存在しない場合はエラーを表示します。
+
+`git pull` 実行時に「There is no tracking information for the current branch」というエラーが出た場合に便利です。
 
 ### git undo-last-commit
 
