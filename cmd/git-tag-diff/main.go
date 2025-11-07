@@ -33,7 +33,7 @@ func main() {
 
 	// git logコマンドの実行
 	tagRange := fmt.Sprintf("%s..%s", oldTag, newTag)
-	cmd := exec.Command("git", "log", tagRange, "--no-merges", "--pretty=format:- %s (%an, %ad)", "--date=short")
+	cmd := exec.Command("git", "log", tagRange, "--no-merges", "--pretty=format:- %s (%an, %ad)", "--date=iso")
 
 	output, err := cmd.Output()
 	if err != nil {
