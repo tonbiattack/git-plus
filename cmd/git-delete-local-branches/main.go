@@ -11,6 +11,14 @@ import (
 )
 
 func main() {
+	// -h オプションのチェック
+	for _, arg := range os.Args[1:] {
+		if arg == "-h" {
+			printHelp()
+			return
+		}
+	}
+
 	branches, err := mergedBranches()
 	if err != nil {
 		fmt.Println("マージ済みブランチの取得に失敗しました:", err)
@@ -112,4 +120,26 @@ func askForConfirmation() (bool, error) {
 
 	answer := strings.ToLower(strings.TrimSpace(input))
 	return answer == "y" || answer == "yes", nil
+}
+
+func printHelp() {
+	help := `git delete-local-branches - マージ済みのローカルブランチを削除
+
+使い方:
+  git delete-local-branches
+
+説明:
+  git branch --merged に含まれるマージ済みブランチのうち、
+  main / master / develop 以外のブランチをまとめて削除します。
+  削除前に確認プロンプトが表示されます。
+
+オプション:
+  -h                    このヘルプを表示
+
+注意:
+  - 削除対象のブランチは削除前に一覧表示されます
+  - y または yes を入力すると削除が実行されます
+  - 未マージのブランチは削除されません
+`
+	fmt.Print(help)
 }

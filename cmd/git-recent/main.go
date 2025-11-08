@@ -15,6 +15,14 @@ type BranchInfo struct {
 }
 
 func main() {
+	// -h オプションのチェック
+	for _, arg := range os.Args[1:] {
+		if arg == "-h" {
+			printHelp()
+			return
+		}
+	}
+
 	fmt.Println("最近使用したブランチを取得しています...")
 
 	branches, err := getRecentBranches()
@@ -158,4 +166,27 @@ func switchBranch(branch string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
+}
+
+func printHelp() {
+	help := `git recent - 最近使用したブランチを表示して切り替え
+
+使い方:
+  git recent
+
+説明:
+  最近コミットがあったブランチを時系列順（最新順）に最大10件表示します。
+  番号を入力することで、選択したブランチに即座に切り替えられます。
+  現在のブランチは一覧から除外されます。
+
+オプション:
+  -h                    このヘルプを表示
+
+使用方法:
+  1. git recent を実行
+  2. ブランチ一覧が表示される
+  3. 切り替えたいブランチの番号を入力
+  4. 空入力でキャンセル
+`
+	fmt.Print(help)
 }

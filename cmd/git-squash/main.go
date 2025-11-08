@@ -17,6 +17,14 @@ type commit struct {
 }
 
 func main() {
+	// -h オプションのチェック
+	for _, arg := range os.Args[1:] {
+		if arg == "-h" {
+			printHelp()
+			return
+		}
+	}
+
 	var numCommits int
 	var err error
 
@@ -216,4 +224,30 @@ func runSquash(numCommits int, commits []commit) error {
 
 	fmt.Printf("スカッシュが完了しました。%d個のコミットが1つにまとめられました。\n", numCommits)
 	return nil
+}
+
+func printHelp() {
+	help := `git squash - 複数のコミットをスカッシュ
+
+使い方:
+  git squash           # 対話的にコミット数を選択
+  git squash <数>      # 指定した数のコミットをスカッシュ
+
+説明:
+  直近の複数コミットを1つにまとめます。
+  引数なしで実行すると、最近の10個のコミットを表示し、
+  スカッシュするコミット数を入力で指定できます。
+
+オプション:
+  -h                   このヘルプを表示
+
+例:
+  git squash           # 対話的に選択
+  git squash 3         # 直近3つのコミットをスカッシュ
+
+注意:
+  - 最低2つ以上のコミットが必要です
+  - 新しいコミットメッセージの入力が必要です
+`
+	fmt.Print(help)
 }

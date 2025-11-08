@@ -8,6 +8,14 @@ import (
 )
 
 func main() {
+	// -h オプションのチェック
+	for _, arg := range os.Args[1:] {
+		if arg == "-h" {
+			printHelp()
+			return
+		}
+	}
+
 	// 現在のブランチ名を取得
 	currentBranch, err := getCurrentBranch()
 	if err != nil {
@@ -87,4 +95,33 @@ func remoteRefExists(ref string) (bool, error) {
 		return false, err
 	}
 	return true, nil
+}
+
+func printHelp() {
+	help := `git track - トラッキングブランチを設定
+
+使い方:
+  git track                    # origin/<現在のブランチ名> をトラッキング
+  git track <リモート名>       # <リモート名>/<現在のブランチ名> をトラッキング
+  git track <リモート名> <ブランチ名>  # <リモート名>/<ブランチ名> をトラッキング
+
+説明:
+  現在のブランチに対してトラッキングブランチを設定します。
+  リモートブランチが存在しない場合は、自動的に
+  git push --set-upstream を実行してリモートブランチを作成し、
+  トラッキング設定を行います。
+
+オプション:
+  -h                    このヘルプを表示
+
+例:
+  git track                    # origin/<現在のブランチ> をトラッキング
+  git track upstream           # upstream/<現在のブランチ> をトラッキング
+  git track origin feature-123 # origin/feature-123 をトラッキング
+
+注意:
+  - リモートブランチがない場合は自動でプッシュされます
+  - git pull 実行時のトラッキング情報エラーを解決できます
+`
+	fmt.Print(help)
 }

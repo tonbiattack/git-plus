@@ -17,6 +17,14 @@ type StashInfo struct {
 }
 
 func main() {
+	// -h オプションのチェック
+	for _, arg := range os.Args[1:] {
+		if arg == "-h" {
+			printHelp()
+			return
+		}
+	}
+
 	fmt.Println("スタッシュを分析しています...")
 
 	// 全スタッシュの一覧を取得
@@ -259,4 +267,28 @@ func deleteStash(index int) error {
 	}
 
 	return nil
+}
+
+func printHelp() {
+	help := `git stash-cleanup - 重複するスタッシュを検出して削除
+
+使い方:
+  git stash-cleanup
+
+説明:
+  全てのスタッシュを分析し、ファイル構成と内容が完全に同一の
+  スタッシュを検出します。重複するスタッシュをグループ化して表示し、
+  削除確認のプロンプトを表示します。
+  各重複グループから最新のスタッシュ（インデックスが最小）のみを残し、
+  古い重複を削除します。
+
+オプション:
+  -h                    このヘルプを表示
+
+注意:
+  - 削除前に確認プロンプトが表示されます
+  - y または yes を入力すると削除が実行されます
+  - 各重複グループで最新のもののみが残ります
+`
+	fmt.Print(help)
 }

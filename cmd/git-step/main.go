@@ -57,7 +57,7 @@ func main() {
 			}
 		case "--include-initial":
 			excludeInitial = false
-		case "--help", "-h":
+		case "-h":
 			printHelp()
 			return
 		}
@@ -131,7 +131,7 @@ func printHelp() {
   --since, -s <日時>      集計開始日時
   --until, -u <日時>      集計終了日時
   --include-initial       初回コミットを含める（デフォルトは除外）
-  --help, -h              このヘルプを表示
+  -h                      このヘルプを表示
 
 説明:
   リポジトリ全体のステップ数（行数）とユーザーごとの貢献度を集計します。

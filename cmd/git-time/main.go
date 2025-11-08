@@ -33,7 +33,7 @@ type CommitStat struct {
 
 func main() {
 	// コマンドライン引数を解析
-	// サポートするオプション: --since/-s, --until/-u, -w, -m, -y, --scope, --limit, --help/-h
+	// サポートするオプション: --since/-s, --until/-u, -w, -m, -y, --scope, --limit, -h
 	sinceArg := ""     // 集計開始日時（例: "2024-01-01", "2 weeks ago"）
 	untilArg := ""     // 集計終了日時（デフォルト: 現在）
 	weeks := 0         // -w オプションで指定された週数
@@ -95,7 +95,7 @@ func main() {
 				}
 				i++
 			}
-		case "--help", "-h":
+		case "-h":
 			printHelp()
 			os.Exit(0)
 		}
@@ -508,7 +508,7 @@ func printHelp() {
   --limit, -l <数>      表示件数 (デフォルト: 20)
                         例: -l 50 (50件表示), -l 0 (全件表示)
   
-  --help, -h            このヘルプを表示
+  -h                    このヘルプを表示
 
 使用例:
   git time                              # 過去1週間の作業時間を表示 (20件)

@@ -10,6 +10,14 @@ import (
 )
 
 func main() {
+	// -h オプションのチェック
+	for _, arg := range os.Args[1:] {
+		if arg == "-h" {
+			printHelp()
+			return
+		}
+	}
+
 	if len(os.Args) < 2 {
 		fmt.Println("ブランチ名を指定してください。")
 		os.Exit(1)
@@ -106,4 +114,26 @@ func askForAction(branch string) (string, error) {
 func isNotFound(err error) bool {
 	exitErr, ok := err.(*exec.ExitError)
 	return ok && exitErr.ExitCode() == 1
+}
+
+func printHelp() {
+	help := `git newbranch - ブランチを作成または再作成
+
+使い方:
+  git newbranch <ブランチ名>
+
+説明:
+  指定したブランチ名でブランチを作成します。
+  既にブランチが存在する場合は、以下の選択肢が表示されます：
+    [r]ecreate - ブランチを削除して作り直す
+    [s]witch   - 既存のブランチに切り替える
+    [c]ancel   - 処理を中止する
+
+オプション:
+  -h                    このヘルプを表示
+
+例:
+  git newbranch feature/awesome    # feature/awesome ブランチを作成
+`
+	fmt.Print(help)
 }

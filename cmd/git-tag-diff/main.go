@@ -9,6 +9,14 @@ import (
 )
 
 func main() {
+	// -h オプションのチェック
+	for _, arg := range os.Args[1:] {
+		if arg == "-h" {
+			printHelp()
+			return
+		}
+	}
+
 	if len(os.Args) < 3 {
 		fmt.Println("使用方法: git tag-diff <古いタグ> <新しいタグ>")
 		fmt.Println("例: git tag-diff V4.2.00.00 V4.3.00.00")
@@ -76,4 +84,27 @@ func validateTag(tag string) error {
 		return err
 	}
 	return nil
+}
+
+func printHelp() {
+	help := `git tag-diff - 2つのタグ間の差分を取得
+
+使い方:
+  git tag-diff <古いタグ> <新しいタグ>
+
+説明:
+  2つのタグ間のコミット差分を取得し、ファイルに出力します。
+  Mergeコミットは自動的に除外されます。
+  出力形式: - コミットメッセージ (作成者名, 日付)
+  
+オプション:
+  -h                    このヘルプを表示
+
+例:
+  git tag-diff V4.2.00.00 V4.3.00.00
+
+出力:
+  tag_diff_<古いタグ>_to_<新しいタグ>.txt に保存されます。
+`
+	fmt.Print(help)
 }

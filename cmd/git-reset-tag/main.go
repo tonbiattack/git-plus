@@ -7,6 +7,14 @@ import (
 )
 
 func main() {
+	// -h オプションのチェック
+	for _, arg := range os.Args[1:] {
+		if arg == "-h" {
+			printHelp()
+			return
+		}
+	}
+
 	if len(os.Args) < 2 {
 		fmt.Println("タグ名を指定してください。")
 		os.Exit(1)
@@ -51,4 +59,27 @@ func runGitCommand(ignoreError bool, args ...string) error {
 	}
 
 	return nil
+}
+
+func printHelp() {
+	help := `git reset-tag - タグをリセットして再作成
+
+使い方:
+  git reset-tag <タグ名>
+
+説明:
+  指定したタグをローカルとリモートから削除し、
+  最新コミットに同名のタグを再作成してリモートにプッシュします。
+
+オプション:
+  -h                    このヘルプを表示
+
+例:
+  git reset-tag v1.2.3    # v1.2.3 タグをリセット
+
+注意:
+  - ローカルとリモート（origin）のタグが削除されます
+  - 最新コミットに新しいタグが作成されます
+`
+	fmt.Print(help)
 }

@@ -198,6 +198,7 @@ go clean -modcache
 
 ```bash
 git newbranch feature/awesome
+git newbranch -h                 # ヘルプを表示
 ```
 
 1. 同名のローカルブランチが存在しない場合は、新しいブランチを作成して切り替えます。
@@ -214,6 +215,7 @@ git newbranch feature/awesome
 
 ```bash
 git reset-tag v1.2.3
+git reset-tag -h                 # ヘルプを表示
 ```
 
 1. 指定したタグをローカルから削除します。
@@ -228,6 +230,7 @@ git reset-tag v1.2.3
 ```bash
 git amend
 git amend --no-edit
+git amend -h                     # ヘルプを表示
 ```
 
 1. `git commit --amend` を呼び出し、直前のコミットを再編集します。
@@ -239,6 +242,7 @@ git amend --no-edit
 ```bash
 git squash           # 対話的にコミット数を選択
 git squash 3         # 直近3つのコミットをスカッシュ
+git squash -h        # ヘルプを表示
 ```
 
 1. 引数なしで実行すると、最近の10個のコミットを表示し、スカッシュするコミット数を入力で指定できます。
@@ -250,6 +254,7 @@ git squash 3         # 直近3つのコミットをスカッシュ
 
 ```bash
 git delete-local-branches
+git delete-local-branches -h     # ヘルプを表示
 ```
 
 1. `git branch --merged` に含まれ、`main` / `master` / `develop` 以外のブランチを抽出します。
@@ -262,6 +267,7 @@ git delete-local-branches
 git track                    # origin/<現在のブランチ名> をトラッキング（リモートブランチがなければ自動プッシュ）
 git track upstream           # upstream/<現在のブランチ名> をトラッキング
 git track origin feature-123 # origin/feature-123 をトラッキング
+git track -h                 # ヘルプを表示
 ```
 
 1. 引数なしで実行すると、現在のブランチに対して `origin/<現在のブランチ名>` をトラッキングブランチとして設定します。
@@ -275,6 +281,7 @@ git track origin feature-123 # origin/feature-123 をトラッキング
 
 ```bash
 git undo-last-commit
+git undo-last-commit -h          # ヘルプを表示
 ```
 
 1. `git reset --soft HEAD^` を実行し、直近のコミットだけを取り消します。
@@ -284,6 +291,7 @@ git undo-last-commit
 
 ```bash
 git tag-diff V4.2.00.00 V4.3.00.00
+git tag-diff -h                    # ヘルプを表示
 ```
 
 1. 2つのタグ間のコミット差分を取得します。
@@ -297,6 +305,7 @@ git tag-diff V4.2.00.00 V4.3.00.00
 
 ```bash
 git stash-cleanup
+git stash-cleanup -h             # ヘルプを表示
 ```
 
 1. 全てのスタッシュを分析し、ファイル構成と内容が完全に同一のスタッシュを検出します。
@@ -311,6 +320,7 @@ git stash-cleanup
 
 ```bash
 git recent
+git recent -h                    # ヘルプを表示
 ```
 
 1. 最近コミットがあったブランチを最大10件、時系列順（最新順）に表示します。
@@ -331,6 +341,7 @@ git time -w 2 -l 50                   # 過去2週間を50件表示
 git time -w 2 -l 0                    # 過去2週間を全件表示
 git time --scope remotes              # リモート追跡ブランチのみ（再現性高）
 git time --scope local                # ローカルブランチのみ
+git time -h                           # ヘルプを表示
 ```
 
 1. 指定された期間のコミット履歴を分析し、作業時間を自動集計してコミット別に表示します。
@@ -349,7 +360,7 @@ git time --scope local                # ローカルブランチのみ
   - `all`: すべてのブランチ（ローカル+リモート）
   - `local`: ローカルブランチのみ
 - `--limit, -l <数>`: 表示件数（デフォルト: 20、0で全件表示）
-- `--help, -h`: ヘルプを表示
+- `-h`: ヘルプを表示
 
 **主な機能:**
 - **正確な作業時間計算**: ブランチと作成者ごとにグループ化してから時間差を計算するため、異なるブランチや作成者のコミット間の時間が作業時間として誤ってカウントされることがありません。
@@ -372,6 +383,7 @@ git step -m 1               # 過去1ヶ月
 git step -y 1               # 過去1年
 git step --since 2024-01-01 # 指定日以降
 git step --include-initial  # 初回コミットを含める
+git step -h                 # ヘルプを表示
 ```
 
 1. リポジトリ全体のステップ数（行数）とユーザーごとの貢献度を集計します。
@@ -388,7 +400,7 @@ git step --include-initial  # 初回コミットを含める
 - `--since, -s <日時>`: 集計開始日時
 - `--until, -u <日時>`: 集計終了日時
 - `--include-initial`: 初回コミットを含める（デフォルトは除外）
-- `--help, -h`: ヘルプを表示
+- `-h`: ヘルプを表示
 
 **主な機能:**
 - **貢献度の可視化**: チームメンバーごとのコード量を一目で把握できます。
