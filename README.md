@@ -12,6 +12,7 @@ Git の日常操作を少しだけ楽にするためのカスタムコマンド�
 - `git tag-diff`：2つのタグ間の差分を取得し、課題IDを抽出してファイルに出力します。リリースノート作成に便利です。
 - `git stash-cleanup`：重複するスタッシュを検出して自動的に削除します。各重複グループの最新のものだけを残します。
 - `git recent`：最近使用したブランチを時系列で表示し、番号で選択して簡単に切り替えられます。
+- `git time`：コミット履歴から作業時間を自動集計し、ブランチごとやコミットごとに可視化します。
 
 どれも `git-xxx` という名前のバイナリを用意することで、`git xxx` として呼び出せる Git 拡張サブコマンドです。
 
@@ -30,6 +31,7 @@ go install github.com/tonbiattack/git-plus/cmd/git-undo-last-commit@latest
 go install github.com/tonbiattack/git-plus/cmd/git-tag-diff@latest
 go install github.com/tonbiattack/git-plus/cmd/git-stash-cleanup@latest
 go install github.com/tonbiattack/git-plus/cmd/git-recent@latest
+go install github.com/tonbiattack/git-plus/cmd/git-time@latest
 ```
 
 `@latest` で解決できない場合（モジュールプロキシの都合など）には、`@main` を指定するとリポジトリの最新コミットを直接取得できます。
@@ -51,6 +53,7 @@ go build -o ~/bin/git-undo-last-commit ./cmd/git-undo-last-commit
 go build -o ~/bin/git-tag-diff ./cmd/git-tag-diff
 go build -o ~/bin/git-stash-cleanup ./cmd/git-stash-cleanup
 go build -o ~/bin/git-recent ./cmd/git-recent
+go build -o ~/bin/git-time ./cmd/git-time
 export PATH=$PATH:~/bin
 git newbranch feature/awesome
 ```
@@ -80,6 +83,7 @@ go build -o ./bin/git-undo-last-commit ./cmd/git-undo-last-commit
 go build -o ./bin/git-tag-diff ./cmd/git-tag-diff
 go build -o ./bin/git-stash-cleanup ./cmd/git-stash-cleanup
 go build -o ./bin/git-recent ./cmd/git-recent
+go build -o ./bin/git-time ./cmd/git-time
 ./bin/git-newbranch feature/awesome
 ./bin/git-reset-tag v1.2.3
 ```
@@ -97,6 +101,7 @@ go run ./cmd/git-undo-last-commit
 go run ./cmd/git-tag-diff V4.2.00.00 V4.3.00.00
 go run ./cmd/git-stash-cleanup
 go run ./cmd/git-recent
+go run ./cmd/git-time
 ```
 
 Windows で PowerShell を利用している場合は、`./bin/git-newbranch` の代わりに `.\bin\git-newbranch.exe` のようにパスを指定してください。
@@ -123,6 +128,7 @@ rm $(go env GOPATH)/bin/git-undo-last-commit
 rm $(go env GOPATH)/bin/git-tag-diff
 rm $(go env GOPATH)/bin/git-stash-cleanup
 rm $(go env GOPATH)/bin/git-recent
+rm $(go env GOPATH)/bin/git-time
 ```
 
 **Windows (PowerShell):**
@@ -138,6 +144,7 @@ Remove-Item "$env:GOPATH\bin\git-undo-last-commit.exe"
 Remove-Item "$env:GOPATH\bin\git-tag-diff.exe"
 Remove-Item "$env:GOPATH\bin\git-stash-cleanup.exe"
 Remove-Item "$env:GOPATH\bin\git-recent.exe"
+Remove-Item "$env:GOPATH\bin\git-time.exe"
 ```
 
 ### go install で更新されない場合の対処法
@@ -305,6 +312,33 @@ git recent
 4. 空入力でキャンセルできます。
 
 引数は不要です。頻繁に複数のブランチを行き来する場合や、最近作業していたブランチ名を思い出せない場合に便利です。
+
+### git time
+
+```bash
+git time           # デフォルト: 過去1週間の作業時間をブランチ別に表示
+git time -w 1      # 過去1週間の作業時間
+git time -m 1      # 過去1ヶ月の作業時間
+git time -y 1      # 過去1年の作業時間
+git time -w 2 -c   # 過去2週間をコミット別に表示
+```
+
+1. 指定された期間のコミット履歴を分析し、作業時間を自動集計します。
+2. デフォルトではブランチごとに集計して表示します（`--commits`オプションでコミット別表示に切り替え）。
+3. 連続するコミット間が2時間以内の場合、その時間を作業時間として計算します。
+4. 2時間を超える場合や最後のコミットは、デフォルトで30分と見積もります。
+5. **結果は自動的にファイル（`git_time_*.txt`）に保存されます。**
+
+**オプション:**
+- `-w, --weeks <数>`: 過去N週間の作業時間を集計
+- `-m, --months <数>`: 過去Nヶ月の作業時間を集計
+- `-y, --years <数>`: 過去N年の作業時間を集計
+- `--since, -s <日時>`: 集計開始日時
+- `--until, -u <日時>`: 集計終了日時（デフォルト: 現在）
+- `--commits, -c`: コミット別に表示（デフォルトはブランチ別）
+- `--help, -h`: ヘルプを表示
+
+プロジェクトごとの工数把握や、どのブランチにどれくらい時間を費やしたかを可視化したい場合に便利です。出力ファイルは工数レポートとして活用できます。
 
 ## 開発メモ
 
