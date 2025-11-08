@@ -13,6 +13,7 @@ Git の日常操作を少しだけ楽にするためのカスタムコマンド�
 - `git stash-cleanup`：重複するスタッシュを検出して自動的に削除します。各重複グループの最新のものだけを残します。
 - `git recent`：最近使用したブランチを時系列で表示し、番号で選択して簡単に切り替えられます。
 - `git time`：コミット履歴から作業時間を自動集計し、ブランチごとやコミットごとに可視化します。
+- `git step`：リポジトリ全体のステップ数とユーザーごとの貢献度を集計します。ステップ数が多い順に表示します。
 
 どれも `git-xxx` という名前のバイナリを用意することで、`git xxx` として呼び出せる Git 拡張サブコマンドです。
 
@@ -32,6 +33,7 @@ go install github.com/tonbiattack/git-plus/cmd/git-tag-diff@latest
 go install github.com/tonbiattack/git-plus/cmd/git-stash-cleanup@latest
 go install github.com/tonbiattack/git-plus/cmd/git-recent@latest
 go install github.com/tonbiattack/git-plus/cmd/git-time@latest
+go install github.com/tonbiattack/git-plus/cmd/git-step@latest
 ```
 
 `@latest` で解決できない場合（モジュールプロキシの都合など）には、`@main` を指定するとリポジトリの最新コミットを直接取得できます。
@@ -54,6 +56,7 @@ go build -o ~/bin/git-tag-diff ./cmd/git-tag-diff
 go build -o ~/bin/git-stash-cleanup ./cmd/git-stash-cleanup
 go build -o ~/bin/git-recent ./cmd/git-recent
 go build -o ~/bin/git-time ./cmd/git-time
+go build -o ~/bin/git-step ./cmd/git-step
 export PATH=$PATH:~/bin
 git newbranch feature/awesome
 ```
@@ -84,6 +87,7 @@ go build -o ./bin/git-tag-diff ./cmd/git-tag-diff
 go build -o ./bin/git-stash-cleanup ./cmd/git-stash-cleanup
 go build -o ./bin/git-recent ./cmd/git-recent
 go build -o ./bin/git-time ./cmd/git-time
+go build -o ./bin/git-step ./cmd/git-step
 ./bin/git-newbranch feature/awesome
 ./bin/git-reset-tag v1.2.3
 ```
@@ -102,6 +106,7 @@ go run ./cmd/git-tag-diff V4.2.00.00 V4.3.00.00
 go run ./cmd/git-stash-cleanup
 go run ./cmd/git-recent
 go run ./cmd/git-time
+go run ./cmd/git-step
 ```
 
 Windows で PowerShell を利用している場合は、`./bin/git-newbranch` の代わりに `.\bin\git-newbranch.exe` のようにパスを指定してください。
@@ -129,6 +134,7 @@ rm $(go env GOPATH)/bin/git-tag-diff
 rm $(go env GOPATH)/bin/git-stash-cleanup
 rm $(go env GOPATH)/bin/git-recent
 rm $(go env GOPATH)/bin/git-time
+rm $(go env GOPATH)/bin/git-step
 ```
 
 **Windows (PowerShell):**
@@ -145,6 +151,7 @@ Remove-Item "$env:GOPATH\bin\git-tag-diff.exe"
 Remove-Item "$env:GOPATH\bin\git-stash-cleanup.exe"
 Remove-Item "$env:GOPATH\bin\git-recent.exe"
 Remove-Item "$env:GOPATH\bin\git-time.exe"
+Remove-Item "$env:GOPATH\bin\git-step.exe"
 ```
 
 ### go install で更新されない場合の対処法
@@ -355,6 +362,45 @@ git time --scope local                # ローカルブランチのみ
 - 作業時間はコミット間の時間差から推定するため、実際の作業時間とは異なる場合があります。
 
 プロジェクトごとの工数把握や、どのブランチにどれくらい時間を費やしたかを可視化したい場合に便利です。出力ファイルは工数レポートとして活用できます。
+
+### git step
+
+```bash
+git step                    # 全期間のステップ数を表示
+git step -w 1               # 過去1週間
+git step -m 1               # 過去1ヶ月
+git step -y 1               # 過去1年
+git step --since 2024-01-01 # 指定日以降
+git step --include-initial  # 初回コミットを含める
+```
+
+1. リポジトリ全体のステップ数（行数）とユーザーごとの貢献度を集計します。
+2. デフォルトで初回コミットは除外されます（大量の行数が追加されることが多いため）。
+3. ステップ数（純増行数）が多い順に表示されます。
+4. 各作成者の追加行数、削除行数、純増行数、貢献率を表示します。
+5. 現在のリポジトリ総行数も表示されます。
+6. **結果は自動的にファイル（`git_step_*.txt`）に保存されます。**
+
+**オプション:**
+- `-w, --weeks <数>`: 過去N週間を集計
+- `-m, --months <数>`: 過去Nヶ月を集計
+- `-y, --years <数>`: 過去N年を集計
+- `--since, -s <日時>`: 集計開始日時
+- `--until, -u <日時>`: 集計終了日時
+- `--include-initial`: 初回コミットを含める（デフォルトは除外）
+- `--help, -h`: ヘルプを表示
+
+**主な機能:**
+- **貢献度の可視化**: チームメンバーごとのコード量を一目で把握できます。
+- **期間指定**: 特定の期間に限定した集計が可能です。
+- **初回コミット除外**: デフォルトで初回コミットを除外することで、より実態に即した統計が得られます。
+
+**注意事項:**
+- バイナリファイルの行数は集計から除外されます。
+- 他人が上書きした行は、元の作成者の貢献には残りません。
+- ステップ数は純増（追加 - 削除）として計算されます。
+
+リポジトリ全体の規模把握や、自分がどれくらいコードを書いたかを確認したい場合に便利です。
 
 ## 開発メモ
 
