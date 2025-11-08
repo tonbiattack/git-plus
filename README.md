@@ -19,6 +19,92 @@ Git の日常操作を少しだけ楽にするためのカスタムコマンド�
 
 ## インストール
 
+### 推奨: リポジトリをクローンしてグローバルコマンドとして利用
+
+`go install` がネットワーク環境やプロキシの影響で動作しないことがあるため、リポジトリを直接クローンして利用する方法を推奨します。
+
+**1. リポジトリをクローン**
+
+```bash
+git clone https://github.com/tonbiattack/git-plus.git
+cd git-plus
+```
+
+**2. ビルドしてPATHの通った場所に配置**
+
+**Linux / macOS の場合:**
+
+```bash
+# ~/bin にビルド（~/bin が存在しない場合は作成）
+mkdir -p ~/bin
+
+# 全コマンドをビルド
+go build -o ~/bin/git-newbranch ./cmd/git-newbranch
+go build -o ~/bin/git-reset-tag ./cmd/git-reset-tag
+go build -o ~/bin/git-amend ./cmd/git-amend
+go build -o ~/bin/git-squash ./cmd/git-squash
+go build -o ~/bin/git-track ./cmd/git-track
+go build -o ~/bin/git-delete-local-branches ./cmd/git-delete-local-branches
+go build -o ~/bin/git-undo-last-commit ./cmd/git-undo-last-commit
+go build -o ~/bin/git-tag-diff ./cmd/git-tag-diff
+go build -o ~/bin/git-stash-cleanup ./cmd/git-stash-cleanup
+go build -o ~/bin/git-recent ./cmd/git-recent
+go build -o ~/bin/git-time ./cmd/git-time
+go build -o ~/bin/git-step ./cmd/git-step
+
+# PATHに追加（まだ追加していない場合）
+echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+# zsh を使用している場合は ~/.zshrc に追加
+```
+
+**Windows (PowerShell) の場合:**
+
+```powershell
+# ユーザーディレクトリ配下に bin フォルダを作成
+New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\bin"
+
+# 全コマンドをビルド
+go build -o "$env:USERPROFILE\bin\git-newbranch.exe" .\cmd\git-newbranch
+go build -o "$env:USERPROFILE\bin\git-reset-tag.exe" .\cmd\git-reset-tag
+go build -o "$env:USERPROFILE\bin\git-amend.exe" .\cmd\git-amend
+go build -o "$env:USERPROFILE\bin\git-squash.exe" .\cmd\git-squash
+go build -o "$env:USERPROFILE\bin\git-track.exe" .\cmd\git-track
+go build -o "$env:USERPROFILE\bin\git-delete-local-branches.exe" .\cmd\git-delete-local-branches
+go build -o "$env:USERPROFILE\bin\git-undo-last-commit.exe" .\cmd\git-undo-last-commit
+go build -o "$env:USERPROFILE\bin\git-tag-diff.exe" .\cmd\git-tag-diff
+go build -o "$env:USERPROFILE\bin\git-stash-cleanup.exe" .\cmd\git-stash-cleanup
+go build -o "$env:USERPROFILE\bin\git-recent.exe" .\cmd\git-recent
+go build -o "$env:USERPROFILE\bin\git-time.exe" .\cmd\git-time
+go build -o "$env:USERPROFILE\bin\git-step.exe" .\cmd\git-step
+
+# PATHに追加（まだ追加していない場合）
+# システム環境変数に追加する場合は管理者権限で実行
+$currentPath = [Environment]::GetEnvironmentVariable("Path", "User")
+if ($currentPath -notlike "*$env:USERPROFILE\bin*") {
+    [Environment]::SetEnvironmentVariable("Path", "$currentPath;$env:USERPROFILE\bin", "User")
+}
+# 現在のセッションで即座に利用するには、PowerShellを再起動するか以下を実行
+$env:Path = [Environment]::GetEnvironmentVariable("Path", "User")
+```
+
+**3. 動作確認**
+
+```bash
+git newbranch -h
+git step -h
+```
+
+**更新方法:**
+
+```bash
+cd git-plus
+git pull
+# 上記のビルドコマンドを再実行
+```
+
+### 代替: go install を使用（ネットワーク環境による）
+
 Go 1.22 以降がインストールされていれば、以下のコマンドだけで導入できます。
 
 ```bash
@@ -38,44 +124,14 @@ go install github.com/tonbiattack/git-plus/cmd/git-step@latest
 
 `@latest` で解決できない場合（モジュールプロキシの都合など）には、`@main` を指定するとリポジトリの最新コミットを直接取得できます。
 
-`GOBIN`（または `GOPATH/bin`）が PATH に含まれていない場合は、環境に合わせて追加してください。カスタムディレクトリに配置したい場合は、`go install` の代わりに `go build -o <任意のパス>` を利用できます。
+`GOBIN`（または `GOPATH/bin`）が PATH に含まれていない場合は、環境に合わせて追加してください。
 
-### PATH を通してカスタムコマンドとして利用する
+### ローカルで開発・テストする方法
 
-`go install` を使わずにローカルビルドしたバイナリをサブコマンドとして登録する場合は、`~/bin` など任意のディレクトリに出力し、そのパスを環境変数 `PATH` に追加します。
-
-```bash
-go build -o ~/bin/git-newbranch ./cmd/git-newbranch
-go build -o ~/bin/git-reset-tag ./cmd/git-reset-tag
-go build -o ~/bin/git-amend ./cmd/git-amend
-go build -o ~/bin/git-squash ./cmd/git-squash
-go build -o ~/bin/git-track ./cmd/git-track
-go build -o ~/bin/git-delete-local-branches ./cmd/git-delete-local-branches
-go build -o ~/bin/git-undo-last-commit ./cmd/git-undo-last-commit
-go build -o ~/bin/git-tag-diff ./cmd/git-tag-diff
-go build -o ~/bin/git-stash-cleanup ./cmd/git-stash-cleanup
-go build -o ~/bin/git-recent ./cmd/git-recent
-go build -o ~/bin/git-time ./cmd/git-time
-go build -o ~/bin/git-step ./cmd/git-step
-export PATH=$PATH:~/bin
-git newbranch feature/awesome
-```
-
-1. `go build` でバイナリを作成し、`~/bin` に保存します。
-2. `export PATH=...` で `~/bin` を検索パスに追加します。
-3. 以降は `git newbranch` のように Git サブコマンドとして呼び出せます。
-
-この設定を永続化したい場合は、`export PATH=$PATH:~/bin` の行を `~/.bashrc` や `~/.zshrc` などのシェル設定ファイルに追記してください。Fish や Windows PowerShell を利用している場合は、それぞれの方法でパスを追加してください。
-
-同じ `go install` を再度実行すると、指定したバージョンのモジュールが改めて取得され、既存のバイナリが上書きされます。
-
-### ローカルで動作を確認する方法
-
-リポジトリをクローンしている場合は、`go install` を使わなくてもローカルでそのままビルド・実行できます。
+リポジトリをクローンしている場合は、グローバルにインストールせずにローカルでそのまま実行できます。
 
 ```bash
-git clone git@github.com:tonbiattack/git-plus.git
-cd git-plus
+# プロジェクトディレクトリ内でビルド
 go build -o ./bin/git-newbranch ./cmd/git-newbranch
 go build -o ./bin/git-reset-tag ./cmd/git-reset-tag
 go build -o ./bin/git-amend ./cmd/git-amend
@@ -88,6 +144,8 @@ go build -o ./bin/git-stash-cleanup ./cmd/git-stash-cleanup
 go build -o ./bin/git-recent ./cmd/git-recent
 go build -o ./bin/git-time ./cmd/git-time
 go build -o ./bin/git-step ./cmd/git-step
+
+# 相対パスで実行
 ./bin/git-newbranch feature/awesome
 ./bin/git-reset-tag v1.2.3
 ```
@@ -111,14 +169,56 @@ go run ./cmd/git-step
 
 Windows で PowerShell を利用している場合は、`./bin/git-newbranch` の代わりに `.\bin\git-newbranch.exe` のようにパスを指定してください。
 
-同じ `go install` を再度実行すると、指定したバージョンのモジュールが改めて取得され、既存のバイナリが上書きされます。
-
 
 ## アンインストール
 
-`go install` で配置したバイナリは、既定では `go env GOBIN`（未設定時は `$(go env GOPATH)/bin`）に保存されます。不要になった場合は、配置先からバイナリを削除してください。
+### クローン版のアンインストール
 
-### バイナリのみ削除（通常のアンインストール）
+**Linux / macOS:**
+
+```bash
+# バイナリを削除
+rm ~/bin/git-newbranch
+rm ~/bin/git-reset-tag
+rm ~/bin/git-amend
+rm ~/bin/git-squash
+rm ~/bin/git-track
+rm ~/bin/git-delete-local-branches
+rm ~/bin/git-undo-last-commit
+rm ~/bin/git-tag-diff
+rm ~/bin/git-stash-cleanup
+rm ~/bin/git-recent
+rm ~/bin/git-time
+rm ~/bin/git-step
+
+# リポジトリも削除する場合
+rm -rf ~/path/to/git-plus
+```
+
+**Windows (PowerShell):**
+
+```powershell
+# バイナリを削除
+Remove-Item "$env:USERPROFILE\bin\git-newbranch.exe"
+Remove-Item "$env:USERPROFILE\bin\git-reset-tag.exe"
+Remove-Item "$env:USERPROFILE\bin\git-amend.exe"
+Remove-Item "$env:USERPROFILE\bin\git-squash.exe"
+Remove-Item "$env:USERPROFILE\bin\git-track.exe"
+Remove-Item "$env:USERPROFILE\bin\git-delete-local-branches.exe"
+Remove-Item "$env:USERPROFILE\bin\git-undo-last-commit.exe"
+Remove-Item "$env:USERPROFILE\bin\git-tag-diff.exe"
+Remove-Item "$env:USERPROFILE\bin\git-stash-cleanup.exe"
+Remove-Item "$env:USERPROFILE\bin\git-recent.exe"
+Remove-Item "$env:USERPROFILE\bin\git-time.exe"
+Remove-Item "$env:USERPROFILE\bin\git-step.exe"
+
+# リポジトリも削除する場合
+Remove-Item -Recurse -Force "C:\path\to\git-plus"
+```
+
+### go install 版のアンインストール
+
+`go install` で配置したバイナリは、既定では `go env GOBIN`（未設定時は `$(go env GOPATH)/bin`）に保存されます。
 
 **Linux / macOS:**
 
