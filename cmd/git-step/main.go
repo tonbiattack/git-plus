@@ -12,10 +12,12 @@ import (
 
 // AuthorStats はユーザーごとの統計情報
 type AuthorStats struct {
-	Name    string
-	Added   int
-	Deleted int
-	Net     int // 純増行数 (Added - Deleted)
+	Name        string
+	Added       int
+	Deleted     int
+	Net         int // 純増行数 (Added - Deleted)
+	Modified    int // 更新行数 (Added + Deleted)
+	CurrentCode int // 現在のコードベースに残っている行数
 }
 
 func main() {
@@ -101,15 +103,19 @@ func main() {
 	// 現在のリポジトリの総行数を取得
 	currentLines := getCurrentTotalLines()
 
-	// コード割合が多い順にソート
-	sort.Slice(authorStats, func(i, j int) bool {
-		ratioI := 0.0
-		ratioJ := 0.0
-		if currentLines > 0 {
-			ratioI = float64(authorStats[i].Added) / float64(currentLines)
-			ratioJ = float64(authorStats[j].Added) / float64(currentLines)
+	// 現在のコードベースでの各ユーザーの行数を取得（git blameベース）
+	currentCodeStats := getCurrentCodeByAuthor()
+
+	// authorStatsに現在のコード行数を追加
+	for i := range authorStats {
+		if lines, exists := currentCodeStats[authorStats[i].Name]; exists {
+			authorStats[i].CurrentCode = lines
 		}
-		return ratioI > ratioJ
+	}
+
+	// コード割合が多い順にソート（現在のコードベース）
+	sort.Slice(authorStats, func(i, j int) bool {
+		return authorStats[i].CurrentCode > authorStats[j].CurrentCode
 	})
 
 	// 結果を表示
@@ -220,6 +226,7 @@ func getAuthorStats(since, until string, excludeInitial bool) []AuthorStats {
 					authorMap[currentAuthor].Added += added
 					authorMap[currentAuthor].Deleted += deleted
 					authorMap[currentAuthor].Net += (added - deleted)
+					authorMap[currentAuthor].Modified += (added + deleted)
 				}
 			}
 		}
@@ -263,6 +270,42 @@ func getCurrentTotalLines() int {
 	return totalLines
 }
 
+func getCurrentCodeByAuthor() map[string]int {
+	// git ls-filesで全ファイルを取得
+	cmd := exec.Command("git", "ls-files")
+	output, err := cmd.Output()
+	if err != nil {
+		return make(map[string]int)
+	}
+
+	files := strings.Split(strings.TrimSpace(string(output)), "\n")
+	authorLines := make(map[string]int)
+
+	for _, file := range files {
+		if file == "" {
+			continue
+		}
+
+		// git blameで各行の作成者を取得
+		blameCmd := exec.Command("git", "blame", "--line-porcelain", file)
+		blameOutput, err := blameCmd.Output()
+		if err != nil {
+			continue
+		}
+
+		lines := strings.Split(string(blameOutput), "\n")
+		for _, line := range lines {
+			// "author " で始まる行から作成者名を取得
+			if strings.HasPrefix(line, "author ") {
+				author := strings.TrimPrefix(line, "author ")
+				authorLines[author]++
+			}
+		}
+	}
+
+	return authorLines
+}
+
 func displayStats(stats []AuthorStats, totalAdded, totalDeleted, totalNet, currentLines int, since, until string) {
 	fmt.Println("=== リポジトリステップ数統計 ===")
 	fmt.Println()
@@ -298,19 +341,21 @@ func displayStats(stats []AuthorStats, totalAdded, totalDeleted, totalNet, curre
 	// ユーザー別統計
 	fmt.Println("【ユーザー別統計】（コード割合が多い順）")
 	fmt.Println()
-	fmt.Printf("%-30s %12s %12s %10s\n", "作成者", "追加", "削除", "コード割合")
-	fmt.Println(strings.Repeat("-", 70))
+	fmt.Printf("%-30s %12s %12s %12s %12s %10s\n", "作成者", "追加", "削除", "更新", "現在行数", "コード割合")
+	fmt.Println(strings.Repeat("-", 97))
 
 	for _, stat := range stats {
 		codeRatio := 0.0
 		if currentLines > 0 {
-			codeRatio = float64(stat.Added) / float64(currentLines) * 100
+			codeRatio = float64(stat.CurrentCode) / float64(currentLines) * 100
 		}
 
-		fmt.Printf("%-30s %12s %12s %9.1f%%\n",
+		fmt.Printf("%-30s %12s %12s %12s %12s %9.1f%%\n",
 			stat.Name,
 			formatNumber(stat.Added),
 			formatNumber(stat.Deleted),
+			formatNumber(stat.Modified),
+			formatNumber(stat.CurrentCode),
 			codeRatio,
 		)
 	}
@@ -366,19 +411,21 @@ func saveToFile(stats []AuthorStats, totalAdded, totalDeleted, totalNet, current
 
 	fmt.Fprintln(file, "【ユーザー別統計】（コード割合が多い順）")
 	fmt.Fprintln(file)
-	fmt.Fprintf(file, "%-30s %12s %12s %10s\n", "作成者", "追加", "削除", "コード割合")
-	fmt.Fprintln(file, strings.Repeat("-", 70))
+	fmt.Fprintf(file, "%-30s %12s %12s %12s %12s %10s\n", "作成者", "追加", "削除", "更新", "現在行数", "コード割合")
+	fmt.Fprintln(file, strings.Repeat("-", 97))
 
 	for _, stat := range stats {
 		codeRatio := 0.0
 		if currentLines > 0 {
-			codeRatio = float64(stat.Added) / float64(currentLines) * 100
+			codeRatio = float64(stat.CurrentCode) / float64(currentLines) * 100
 		}
 
-		fmt.Fprintf(file, "%-30s %12s %12s %9.1f%%\n",
+		fmt.Fprintf(file, "%-30s %12s %12s %12s %12s %9.1f%%\n",
 			stat.Name,
 			formatNumber(stat.Added),
 			formatNumber(stat.Deleted),
+			formatNumber(stat.Modified),
+			formatNumber(stat.CurrentCode),
 			codeRatio,
 		)
 	}
