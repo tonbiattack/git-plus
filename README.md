@@ -10,6 +10,7 @@ Git の日常操作を少しだけ楽にするためのカスタムコマンド�
 - `git delete-local-branches`：`main` / `master` / `develop` 以外のマージ済みローカルブランチをまとめて削除します。
 - `git undo-last-commit`：直近のコミットを取り消し、変更内容をステージング状態のまま残します。
 - `git tag-diff`：2つのタグ間の差分を取得し、課題IDを抽出してファイルに出力します。リリースノート作成に便利です。
+- `git stash-cleanup`：重複するスタッシュを検出して自動的に削除します。各重複グループの最新のものだけを残します。
 
 どれも `git-xxx` という名前のバイナリを用意することで、`git xxx` として呼び出せる Git 拡張サブコマンドです。
 
@@ -26,6 +27,7 @@ go install github.com/tonbiattack/git-plus/cmd/git-track@latest
 go install github.com/tonbiattack/git-plus/cmd/git-delete-local-branches@latest
 go install github.com/tonbiattack/git-plus/cmd/git-undo-last-commit@latest
 go install github.com/tonbiattack/git-plus/cmd/git-tag-diff@latest
+go install github.com/tonbiattack/git-plus/cmd/git-stash-cleanup@latest
 ```
 
 `@latest` で解決できない場合（モジュールプロキシの都合など）には、`@main` を指定するとリポジトリの最新コミットを直接取得できます。
@@ -45,6 +47,7 @@ go build -o ~/bin/git-track ./cmd/git-track
 go build -o ~/bin/git-delete-local-branches ./cmd/git-delete-local-branches
 go build -o ~/bin/git-undo-last-commit ./cmd/git-undo-last-commit
 go build -o ~/bin/git-tag-diff ./cmd/git-tag-diff
+go build -o ~/bin/git-stash-cleanup ./cmd/git-stash-cleanup
 export PATH=$PATH:~/bin
 git newbranch feature/awesome
 ```
@@ -72,6 +75,7 @@ go build -o ./bin/git-track ./cmd/git-track
 go build -o ./bin/git-delete-local-branches ./cmd/git-delete-local-branches
 go build -o ./bin/git-undo-last-commit ./cmd/git-undo-last-commit
 go build -o ./bin/git-tag-diff ./cmd/git-tag-diff
+go build -o ./bin/git-stash-cleanup ./cmd/git-stash-cleanup
 ./bin/git-newbranch feature/awesome
 ./bin/git-reset-tag v1.2.3
 ```
@@ -87,6 +91,7 @@ go run ./cmd/git-track
 go run ./cmd/git-delete-local-branches
 go run ./cmd/git-undo-last-commit
 go run ./cmd/git-tag-diff V4.2.00.00 V4.3.00.00
+go run ./cmd/git-stash-cleanup
 ```
 
 Windows で PowerShell を利用している場合は、`./bin/git-newbranch` の代わりに `.\bin\git-newbranch.exe` のようにパスを指定してください。
@@ -111,6 +116,7 @@ rm $(go env GOPATH)/bin/git-track
 rm $(go env GOPATH)/bin/git-delete-local-branches
 rm $(go env GOPATH)/bin/git-undo-last-commit
 rm $(go env GOPATH)/bin/git-tag-diff
+rm $(go env GOPATH)/bin/git-stash-cleanup
 ```
 
 **Windows (PowerShell):**
@@ -124,6 +130,7 @@ Remove-Item "$env:GOPATH\bin\git-track.exe"
 Remove-Item "$env:GOPATH\bin\git-delete-local-branches.exe"
 Remove-Item "$env:GOPATH\bin\git-undo-last-commit.exe"
 Remove-Item "$env:GOPATH\bin\git-tag-diff.exe"
+Remove-Item "$env:GOPATH\bin\git-stash-cleanup.exe"
 ```
 
 ### go install で更新されない場合の対処法
@@ -264,6 +271,20 @@ git tag-diff V4.2.00.00 V4.3.00.00
 4. 出力ファイル名は自動的に `tag_diff_<旧タグ>_to_<新タグ>.txt` として生成されます。
 
 指定したタグが存在しない場合や、タグ間に差分がない場合は適切なメッセージを表示します。
+
+### git stash-cleanup
+
+```bash
+git stash-cleanup
+```
+
+1. 全てのスタッシュを分析し、ファイル構成と内容が完全に同一のスタッシュを検出します。
+2. 重複するスタッシュをグループ化して表示します。
+3. 削除確認のプロンプトを表示します（`y` / `yes` で実行）。
+4. 各重複グループから最新のスタッシュ（インデックスが最小）のみを残し、古い重複を削除します。
+5. 削除結果と残りのスタッシュ数を表示します。
+
+引数は不要です。このコマンドは全スタッシュを自動的にスキャンして重複を検出します。誤って同じ変更を複数回スタッシュした場合や、スタッシュが溜まりすぎた場合の整理に便利です。
 
 ## 開発メモ
 
