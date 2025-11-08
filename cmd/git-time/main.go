@@ -10,39 +10,44 @@ import (
 	"time"
 )
 
+// CommitInfo はコミット情報を表す構造体
+// git log から取得した各コミットのメタデータを保持
 type CommitInfo struct {
-	Hash      string
-	Branch    string
-	Author    string
-	Timestamp time.Time
-	Message   string
-	Files     []string // 変更されたファイルのリスト
+	Hash      string    // コミットハッシュ（SHA-1）
+	Branch    string    // コミットが所属するブランチ名
+	Author    string    // コミット作成者名
+	Timestamp time.Time // コミット日時
+	Message   string    // コミットメッセージ
+	Files     []string  // 変更されたファイルのリスト（git diff-tree から取得）
 }
 
+// BranchStat はブランチごとの集計情報を表す構造体
 type BranchStat struct {
-	Name         string
-	CommitCount  int
-	TotalHours   float64
-	AuthorCounts map[string]int // 作成者ごとのコミット数
+	Name         string         // ブランチ名
+	CommitCount  int            // ブランチに含まれるコミット数
+	TotalHours   float64        // ブランチ全体の総作業時間（時間単位）
+	AuthorCounts map[string]int // 作成者ごとのコミット数（割合算出用）
 }
 
+// CommitStat はコミットごとの集計情報を表す構造体
 type CommitStat struct {
-	Message   string
-	Branch    string
-	Author    string // 作成者を追加
-	Hours     float64
-	Timestamp time.Time
-	Files     []string // 変更されたファイルのリスト
+	Message   string    // コミットメッセージ
+	Branch    string    // コミットが所属するブランチ名
+	Author    string    // コミット作成者名
+	Hours     float64   // 推定作業時間（時間単位）
+	Timestamp time.Time // コミット日時
+	Files     []string  // 変更されたファイルのリスト
 }
 
 func main() {
 	// コマンドライン引数を解析
-	sinceArg := ""
-	untilArg := ""
-	showCommits := false
-	weeks := 0
-	months := 0
-	years := 0
+	// サポートするオプション: --since/-s, --until/-u, --commits/-c, -w, -m, -y, --help/-h
+	sinceArg := ""       // 集計開始日時（例: "2024-01-01", "2 weeks ago"）
+	untilArg := ""       // 集計終了日時（デフォルト: 現在）
+	showCommits := false // true: コミット別表示、false: ブランチ別表示
+	weeks := 0           // -w オプションで指定された週数
+	months := 0          // -m オプションで指定された月数
+	years := 0           // -y オプションで指定された年数
 
 	args := os.Args[1:]
 	for i := 0; i < len(args); i++ {
@@ -90,6 +95,7 @@ func main() {
 	}
 
 	// -w, -m, -y オプションから期間を計算
+	// 優先順位: weeks > months > years（最初に設定されたものが優先）
 	if weeks > 0 {
 		sinceArg = fmt.Sprintf("%d weeks ago", weeks)
 	} else if months > 0 {
@@ -98,7 +104,7 @@ func main() {
 		sinceArg = fmt.Sprintf("%d years ago", years)
 	}
 
-	// デフォルトは1週間前から
+	// デフォルトは1週間前から（オプション未指定時）
 	if sinceArg == "" {
 		sinceArg = "1 week ago"
 	}
@@ -136,11 +142,13 @@ func main() {
 }
 
 // generateOutputFileName は出力ファイル名を生成する
+// フォーマット: git_time_{期間}_{実行日}.txt
+// 例: git_time_1_weeks_ago_2025-11-08.txt
 func generateOutputFileName(since, until string) string {
 	now := time.Now()
-	dateStr := now.Format("2006-01-02")
+	dateStr := now.Format("2006-01-02") // YYYY-MM-DD形式
 
-	// 期間をファイル名に含める
+	// 期間をファイル名に含める（スペースとコロンを変換）
 	periodStr := strings.ReplaceAll(since, " ", "_")
 	periodStr = strings.ReplaceAll(periodStr, ":", "-")
 
@@ -148,10 +156,13 @@ func generateOutputFileName(since, until string) string {
 }
 
 // getCommits は指定された期間のコミット履歴を取得する
+// 注意: git log --remotes を使用するため、リモート追跡ブランチのみを対象とします。
+// これにより、ローカルブランチの状態に依存せず、常に同じ結果が得られます（再現性が高い）。
+// 最新の結果を得るには事前に git fetch を実行してください。
 func getCommits(since, until string) ([]CommitInfo, error) {
 	args := []string{
 		"log",
-		"--all",
+		"--remotes", // リモート追跡ブランチのみを対象（origin/main, origin/develop など）
 		"--format=%H|%D|%an|%at|%s",
 	}
 
@@ -197,7 +208,7 @@ func getCommits(since, until string) ([]CommitInfo, error) {
 		// ブランチ名を抽出
 		branch := extractBranch(refs, hash)
 
-		// stashとdetachedは除外
+		// stashとdetachedは除外（develop、main、その他すべてのブランチは表示される）
 		if branch == "stash" || branch == "detached" {
 			continue
 		}
@@ -224,11 +235,13 @@ func getCommits(since, until string) ([]CommitInfo, error) {
 }
 
 // getChangedFiles は指定されたコミットで変更されたファイルのリストを取得する
+// git diff-tree を使用してファイル名のみを取得（差分内容は取得しない）
+// マージコミットの場合も含め、すべての変更ファイルを返す
 func getChangedFiles(hash string) []string {
 	cmd := exec.Command("git", "diff-tree", "--no-commit-id", "--name-only", "-r", hash)
 	output, err := cmd.Output()
 	if err != nil {
-		return []string{}
+		return []string{} // エラー時は空配列を返す
 	}
 
 	files := strings.Split(strings.TrimSpace(string(output)), "\n")
@@ -243,6 +256,10 @@ func getChangedFiles(hash string) []string {
 }
 
 // extractBranch は refs から ブランチ名を抽出する
+// 優先順位: 1) HEAD -> branch (現在チェックアウト中)
+//  2. ローカルブランチ
+//  3. リモートブランチ（origin/xxx -> xxx に変換）
+//  4. "unknown"
 func extractBranch(refs, hash string) string {
 	if refs == "" {
 		// refsがない場合は、コミットが属するブランチを取得
@@ -250,11 +267,13 @@ func extractBranch(refs, hash string) string {
 		if branch != "" {
 			return branch
 		}
-		return "detached"
+		return "detached" // どのブランチにも属さない場合
 	}
 
 	// "HEAD -> main, origin/main" のような形式から解析
 	parts := strings.Split(refs, ",")
+
+	// フェーズ1: "HEAD -> branch" 形式を優先
 	for _, part := range parts {
 		part = strings.TrimSpace(part)
 
@@ -270,11 +289,11 @@ func extractBranch(refs, hash string) string {
 		}
 	}
 
-	// ローカルブランチが見つからない場合、最初のリモートブランチを使用
+	// フェーズ2: ローカルブランチが見つからない場合、最初のリモートブランチを使用
 	for _, part := range parts {
 		part = strings.TrimSpace(part)
 		if strings.Contains(part, "/") && !strings.HasPrefix(part, "tag:") {
-			// "origin/main" -> "main"
+			// "origin/main" -> "main" に変換
 			parts := strings.SplitN(part, "/", 2)
 			if len(parts) == 2 {
 				return parts[1]
@@ -286,22 +305,34 @@ func extractBranch(refs, hash string) string {
 }
 
 // getBranchForCommit はコミットハッシュから所属ブランチを取得
+// git branch --contains を使用して、コミットを含むブランチの最初のものを返す
+// 複数のブランチに含まれる場合は、git が返す最初のブランチを使用
 func getBranchForCommit(hash string) string {
 	cmd := exec.Command("git", "branch", "--contains", hash, "--format=%(refname:short)")
 	output, err := cmd.Output()
 	if err != nil {
-		return ""
+		return "" // エラー時は空文字列を返す
 	}
 
 	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
 	if len(lines) > 0 && lines[0] != "" {
-		return lines[0]
+		return lines[0] // 最初のブランチを返す
 	}
 
 	return ""
 }
 
 // displayBranchStats はブランチごとの統計を表示する
+// 表示内容:
+//   - ブランチ名
+//   - コミット数と総作業時間(時間単位、小数点第1位まで)
+//   - 貢献者一覧(名前: コミット数 (割合%))
+//
+// 表示順: 最新コミットの新しい順(降順) - branchLastCommitマップで判定
+// 除外ルール: "stash"と"detached"のみ除外、develop/mainは表示対象
+// 表示件数: 無制限(全ブランチ表示)
+// 割合計算: (作成者のコミット数 ÷ ブランチ全体のコミット数) × 100
+// 作業時間計算: 連続コミットの時間差が2時間以内なら実時間、超えたら30分と見積もる
 func displayBranchStats(commits []CommitInfo, outputFile string) {
 	branchMap := make(map[string]*BranchStat)
 
@@ -317,6 +348,7 @@ func displayBranchStats(commits []CommitInfo, outputFile string) {
 		}
 
 		branchMap[commit.Branch].CommitCount++
+		// 作成者ごとのコミット数をカウント（割合算出のため）
 		branchMap[commit.Branch].AuthorCounts[commit.Author]++
 
 		// 次のコミットとの時間差を計算（同じ作業セッションとみなす上限は2時間）
@@ -367,7 +399,13 @@ func displayBranchStats(commits []CommitInfo, outputFile string) {
 	totalCommits := 0
 	totalHours := 0.0
 
+	// すべてのブランチを表示（表示件数制限なし）
 	for _, stat := range stats {
+		// "stash"と"detached"のみ除外（develop/mainは表示）
+		if strings.Contains(stat.Name, "stash") || strings.Contains(stat.Name, "detached") {
+			continue
+		}
+
 		// ブランチ名、コミット数、作業時間
 		line := fmt.Sprintf("%-30s %3d commits (約%.1fh)\n",
 			stat.Name, stat.CommitCount, stat.TotalHours)
@@ -375,7 +413,7 @@ func displayBranchStats(commits []CommitInfo, outputFile string) {
 
 		// 作成者ごとのコミット数と割合を表示
 		if len(stat.AuthorCounts) > 0 {
-			// 作成者をコミット数でソート
+			// 作成者をコミット数でソート（多い順）
 			type authorStat struct {
 				name  string
 				count int
@@ -390,6 +428,8 @@ func displayBranchStats(commits []CommitInfo, outputFile string) {
 
 			// 作成者情報を表示
 			for _, author := range authors {
+				// 割合の算出: (作成者のコミット数 ÷ ブランチ全体のコミット数) × 100
+				// 例: ブランチに10コミットあり、Aさんが7コミット → 7 ÷ 10 × 100 = 70.0%
 				percentage := float64(author.count) / float64(stat.CommitCount) * 100
 				output.WriteString(fmt.Sprintf("  └─ %-25s %3d commits (%.1f%%)\n",
 					author.name, author.count, percentage))
@@ -415,13 +455,25 @@ func displayBranchStats(commits []CommitInfo, outputFile string) {
 }
 
 // displayCommitStats はコミットごとの統計を表示する
+// 表示内容:
+//   - 作業時間(時間単位、小数点第1位まで)
+//   - ブランチ名
+//   - コミットメッセージ
+//   - コミット日時(YYYY-MM-DD HH:MM形式)
+//   - 作成者名
+//   - 変更ファイル名(最大3件、超える場合は件数表示)
+//
+// 表示順: コミット日時の新しい順(降順)
+// 表示件数: 上位20件のみ(定数displayCount)
+// ファイル出力: git_time_*_commits.txt に保存
 func displayCommitStats(commits []CommitInfo, outputFile string) {
 	commitStats := make([]CommitStat, 0, len(commits))
 
+	// 各コミットの作業時間を計算
 	for i, commit := range commits {
-		hours := 0.5 // デフォルト30分
+		hours := 0.5 // デフォルト30分（連続コミットがない場合の見積もり）
 
-		// 次のコミットとの時間差を計算
+		// 次のコミットとの時間差を計算（同じ作業セッションとみなす上限は2時間）
 		if i+1 < len(commits) {
 			nextCommit := commits[i+1]
 			duration := nextCommit.Timestamp.Sub(commit.Timestamp)
@@ -448,7 +500,7 @@ func displayCommitStats(commits []CommitInfo, outputFile string) {
 		return commitStats[i].Timestamp.After(commitStats[j].Timestamp)
 	})
 
-	// 出力ファイル名を生成（commits用）
+	// 出力ファイル名を生成（commits用 - 元のファイル名の拡張子前に _commits を挿入）
 	commitsOutputFile := strings.Replace(outputFile, ".txt", "_commits.txt", 1)
 
 	// 出力内容を構築
@@ -456,16 +508,18 @@ func displayCommitStats(commits []CommitInfo, outputFile string) {
 	output.WriteString("コミットごとの作業時間（直近順）:\n")
 	output.WriteString(strings.Repeat("-", 80) + "\n")
 
+	// 表示件数の上限を20件に設定（全体のコミット数が少ない場合はその数まで）
 	displayCount := 20
 	if len(commitStats) < displayCount {
 		displayCount = len(commitStats)
 	}
 
+	// 上位displayCount件のみ表示
 	for i := 0; i < displayCount; i++ {
 		stat := commitStats[i]
 		dateStr := stat.Timestamp.Format("2006-01-02 15:04")
 
-		// ファイル名のリストを整形
+		// ファイル名のリストを整形（最大3件、超える場合は件数表示）
 		filesStr := ""
 		if len(stat.Files) > 0 {
 			// ファイルが多い場合は最初の3つのみ表示
@@ -487,6 +541,7 @@ func displayCommitStats(commits []CommitInfo, outputFile string) {
 		output.WriteString(line)
 	}
 
+	// 表示しきれなかったコミット数を表示
 	if len(commitStats) > displayCount {
 		output.WriteString(fmt.Sprintf("\n... 他 %d 件\n", len(commitStats)-displayCount))
 	}
@@ -503,6 +558,7 @@ func displayCommitStats(commits []CommitInfo, outputFile string) {
 }
 
 // printHelp はヘルプメッセージを表示する
+// 全てのコマンドラインオプションの使い方を説明
 func printHelp() {
 	fmt.Print(`git time - コミット履歴から作業時間を自動集計
 
