@@ -88,11 +88,6 @@ func main() {
 		return
 	}
 
-	// ステップ数（純増行数）が多い順にソート
-	sort.Slice(authorStats, func(i, j int) bool {
-		return authorStats[i].Net > authorStats[j].Net
-	})
-
 	// 全体の統計を計算
 	totalAdded := 0
 	totalDeleted := 0
@@ -105,6 +100,17 @@ func main() {
 
 	// 現在のリポジトリの総行数を取得
 	currentLines := getCurrentTotalLines()
+
+	// コード割合が多い順にソート
+	sort.Slice(authorStats, func(i, j int) bool {
+		ratioI := 0.0
+		ratioJ := 0.0
+		if currentLines > 0 {
+			ratioI = float64(authorStats[i].Added) / float64(currentLines)
+			ratioJ = float64(authorStats[j].Added) / float64(currentLines)
+		}
+		return ratioI > ratioJ
+	})
 
 	// 結果を表示
 	displayStats(authorStats, totalAdded, totalDeleted, totalNet, currentLines, sinceArg, untilArg)
@@ -290,23 +296,22 @@ func displayStats(stats []AuthorStats, totalAdded, totalDeleted, totalNet, curre
 	fmt.Println()
 
 	// ユーザー別統計
-	fmt.Println("【ユーザー別統計】（純増行数が多い順）")
+	fmt.Println("【ユーザー別統計】（コード割合が多い順）")
 	fmt.Println()
-	fmt.Printf("%-30s %12s %12s %12s %10s\n", "作成者", "追加", "削除", "純増", "貢献率")
-	fmt.Println(strings.Repeat("-", 80))
+	fmt.Printf("%-30s %12s %12s %10s\n", "作成者", "追加", "削除", "コード割合")
+	fmt.Println(strings.Repeat("-", 70))
 
 	for _, stat := range stats {
-		contribution := 0.0
-		if totalNet > 0 {
-			contribution = float64(stat.Net) / float64(totalNet) * 100
+		codeRatio := 0.0
+		if currentLines > 0 {
+			codeRatio = float64(stat.Added) / float64(currentLines) * 100
 		}
 
-		fmt.Printf("%-30s %12s %12s %12s %9.1f%%\n",
+		fmt.Printf("%-30s %12s %12s %9.1f%%\n",
 			stat.Name,
 			formatNumber(stat.Added),
 			formatNumber(stat.Deleted),
-			formatNumber(stat.Net),
-			contribution,
+			codeRatio,
 		)
 	}
 
@@ -359,23 +364,22 @@ func saveToFile(stats []AuthorStats, totalAdded, totalDeleted, totalNet, current
 	fmt.Fprintf(file, "  純増行数: %s\n", formatNumber(totalNet))
 	fmt.Fprintln(file)
 
-	fmt.Fprintln(file, "【ユーザー別統計】（純増行数が多い順）")
+	fmt.Fprintln(file, "【ユーザー別統計】（コード割合が多い順）")
 	fmt.Fprintln(file)
-	fmt.Fprintf(file, "%-30s %12s %12s %12s %10s\n", "作成者", "追加", "削除", "純増", "貢献率")
-	fmt.Fprintln(file, strings.Repeat("-", 80))
+	fmt.Fprintf(file, "%-30s %12s %12s %10s\n", "作成者", "追加", "削除", "コード割合")
+	fmt.Fprintln(file, strings.Repeat("-", 70))
 
 	for _, stat := range stats {
-		contribution := 0.0
-		if totalNet > 0 {
-			contribution = float64(stat.Net) / float64(totalNet) * 100
+		codeRatio := 0.0
+		if currentLines > 0 {
+			codeRatio = float64(stat.Added) / float64(currentLines) * 100
 		}
 
-		fmt.Fprintf(file, "%-30s %12s %12s %12s %9.1f%%\n",
+		fmt.Fprintf(file, "%-30s %12s %12s %9.1f%%\n",
 			stat.Name,
 			formatNumber(stat.Added),
 			formatNumber(stat.Deleted),
-			formatNumber(stat.Net),
-			contribution,
+			codeRatio,
 		)
 	}
 
