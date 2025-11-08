@@ -11,6 +11,7 @@ Git の日常操作を少しだけ楽にするためのカスタムコマンド�
 - `git undo-last-commit`：直近のコミットを取り消し、変更内容をステージング状態のまま残します。
 - `git tag-diff`：2つのタグ間の差分を取得し、課題IDを抽出してファイルに出力します。リリースノート作成に便利です。
 - `git stash-cleanup`：重複するスタッシュを検出して自動的に削除します。各重複グループの最新のものだけを残します。
+- `git recent`：最近使用したブランチを時系列で表示し、番号で選択して簡単に切り替えられます。
 
 どれも `git-xxx` という名前のバイナリを用意することで、`git xxx` として呼び出せる Git 拡張サブコマンドです。
 
@@ -28,6 +29,7 @@ go install github.com/tonbiattack/git-plus/cmd/git-delete-local-branches@latest
 go install github.com/tonbiattack/git-plus/cmd/git-undo-last-commit@latest
 go install github.com/tonbiattack/git-plus/cmd/git-tag-diff@latest
 go install github.com/tonbiattack/git-plus/cmd/git-stash-cleanup@latest
+go install github.com/tonbiattack/git-plus/cmd/git-recent@latest
 ```
 
 `@latest` で解決できない場合（モジュールプロキシの都合など）には、`@main` を指定するとリポジトリの最新コミットを直接取得できます。
@@ -48,6 +50,7 @@ go build -o ~/bin/git-delete-local-branches ./cmd/git-delete-local-branches
 go build -o ~/bin/git-undo-last-commit ./cmd/git-undo-last-commit
 go build -o ~/bin/git-tag-diff ./cmd/git-tag-diff
 go build -o ~/bin/git-stash-cleanup ./cmd/git-stash-cleanup
+go build -o ~/bin/git-recent ./cmd/git-recent
 export PATH=$PATH:~/bin
 git newbranch feature/awesome
 ```
@@ -76,6 +79,7 @@ go build -o ./bin/git-delete-local-branches ./cmd/git-delete-local-branches
 go build -o ./bin/git-undo-last-commit ./cmd/git-undo-last-commit
 go build -o ./bin/git-tag-diff ./cmd/git-tag-diff
 go build -o ./bin/git-stash-cleanup ./cmd/git-stash-cleanup
+go build -o ./bin/git-recent ./cmd/git-recent
 ./bin/git-newbranch feature/awesome
 ./bin/git-reset-tag v1.2.3
 ```
@@ -92,6 +96,7 @@ go run ./cmd/git-delete-local-branches
 go run ./cmd/git-undo-last-commit
 go run ./cmd/git-tag-diff V4.2.00.00 V4.3.00.00
 go run ./cmd/git-stash-cleanup
+go run ./cmd/git-recent
 ```
 
 Windows で PowerShell を利用している場合は、`./bin/git-newbranch` の代わりに `.\bin\git-newbranch.exe` のようにパスを指定してください。
@@ -117,6 +122,7 @@ rm $(go env GOPATH)/bin/git-delete-local-branches
 rm $(go env GOPATH)/bin/git-undo-last-commit
 rm $(go env GOPATH)/bin/git-tag-diff
 rm $(go env GOPATH)/bin/git-stash-cleanup
+rm $(go env GOPATH)/bin/git-recent
 ```
 
 **Windows (PowerShell):**
@@ -131,6 +137,7 @@ Remove-Item "$env:GOPATH\bin\git-delete-local-branches.exe"
 Remove-Item "$env:GOPATH\bin\git-undo-last-commit.exe"
 Remove-Item "$env:GOPATH\bin\git-tag-diff.exe"
 Remove-Item "$env:GOPATH\bin\git-stash-cleanup.exe"
+Remove-Item "$env:GOPATH\bin\git-recent.exe"
 ```
 
 ### go install で更新されない場合の対処法
@@ -285,6 +292,19 @@ git stash-cleanup
 5. 削除結果と残りのスタッシュ数を表示します。
 
 引数は不要です。このコマンドは全スタッシュを自動的にスキャンして重複を検出します。誤って同じ変更を複数回スタッシュした場合や、スタッシュが溜まりすぎた場合の整理に便利です。
+
+### git recent
+
+```bash
+git recent
+```
+
+1. 最近コミットがあったブランチを最大10件、時系列順（最新順）に表示します。
+2. 現在のブランチは一覧から除外されます。
+3. 番号を入力することで、選択したブランチに即座に切り替えられます。
+4. 空入力でキャンセルできます。
+
+引数は不要です。頻繁に複数のブランチを行き来する場合や、最近作業していたブランチ名を思い出せない場合に便利です。
 
 ## 開発メモ
 
