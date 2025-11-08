@@ -20,14 +20,16 @@ type CommitInfo struct {
 }
 
 type BranchStat struct {
-	Name        string
-	CommitCount int
-	TotalHours  float64
+	Name         string
+	CommitCount  int
+	TotalHours   float64
+	AuthorCounts map[string]int // 作成者ごとのコミット数
 }
 
 type CommitStat struct {
 	Message   string
 	Branch    string
+	Author    string // 作成者を追加
 	Hours     float64
 	Timestamp time.Time
 	Files     []string // 変更されたファイルのリスト
@@ -307,13 +309,15 @@ func displayBranchStats(commits []CommitInfo, outputFile string) {
 	for i, commit := range commits {
 		if _, exists := branchMap[commit.Branch]; !exists {
 			branchMap[commit.Branch] = &BranchStat{
-				Name:        commit.Branch,
-				CommitCount: 0,
-				TotalHours:  0,
+				Name:         commit.Branch,
+				CommitCount:  0,
+				TotalHours:   0,
+				AuthorCounts: make(map[string]int),
 			}
 		}
 
 		branchMap[commit.Branch].CommitCount++
+		branchMap[commit.Branch].AuthorCounts[commit.Author]++
 
 		// 次のコミットとの時間差を計算（同じ作業セッションとみなす上限は2時間）
 		if i+1 < len(commits) {
@@ -358,20 +362,45 @@ func displayBranchStats(commits []CommitInfo, outputFile string) {
 	// 出力内容を構築
 	var output strings.Builder
 	output.WriteString("ブランチごとの作業時間:\n")
-	output.WriteString(strings.Repeat("-", 60) + "\n")
+	output.WriteString(strings.Repeat("-", 80) + "\n")
 
 	totalCommits := 0
 	totalHours := 0.0
 
 	for _, stat := range stats {
+		// ブランチ名、コミット数、作業時間
 		line := fmt.Sprintf("%-30s %3d commits (約%.1fh)\n",
 			stat.Name, stat.CommitCount, stat.TotalHours)
 		output.WriteString(line)
+
+		// 作成者ごとのコミット数と割合を表示
+		if len(stat.AuthorCounts) > 0 {
+			// 作成者をコミット数でソート
+			type authorStat struct {
+				name  string
+				count int
+			}
+			authors := make([]authorStat, 0, len(stat.AuthorCounts))
+			for author, count := range stat.AuthorCounts {
+				authors = append(authors, authorStat{name: author, count: count})
+			}
+			sort.Slice(authors, func(i, j int) bool {
+				return authors[i].count > authors[j].count
+			})
+
+			// 作成者情報を表示
+			for _, author := range authors {
+				percentage := float64(author.count) / float64(stat.CommitCount) * 100
+				output.WriteString(fmt.Sprintf("  └─ %-25s %3d commits (%.1f%%)\n",
+					author.name, author.count, percentage))
+			}
+		}
+
 		totalCommits += stat.CommitCount
 		totalHours += stat.TotalHours
 	}
 
-	output.WriteString(strings.Repeat("-", 60) + "\n")
+	output.WriteString(strings.Repeat("-", 80) + "\n")
 	output.WriteString(fmt.Sprintf("合計: %d commits (約%.1fh)\n", totalCommits, totalHours))
 
 	// コンソールに表示
@@ -407,6 +436,7 @@ func displayCommitStats(commits []CommitInfo, outputFile string) {
 		commitStats = append(commitStats, CommitStat{
 			Message:   commit.Message,
 			Branch:    commit.Branch,
+			Author:    commit.Author,
 			Hours:     hours,
 			Timestamp: commit.Timestamp,
 			Files:     commit.Files,
@@ -451,9 +481,9 @@ func displayCommitStats(commits []CommitInfo, outputFile string) {
 			}
 		}
 
-		// ブランチとファイル名を分けて表示
-		line := fmt.Sprintf("[%.1fh] %-20s %s (%s)\n       ファイル: %s\n",
-			stat.Hours, stat.Branch, stat.Message, dateStr, filesStr)
+		// ブランチ、作成者、ファイル名を分けて表示
+		line := fmt.Sprintf("[%.1fh] %-20s %s (%s)\n       作成者: %s\n       ファイル: %s\n",
+			stat.Hours, stat.Branch, stat.Message, dateStr, stat.Author, filesStr)
 		output.WriteString(line)
 	}
 

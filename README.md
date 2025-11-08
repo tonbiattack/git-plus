@@ -6,7 +6,7 @@ Git の日常操作を少しだけ楽にするためのカスタムコマンド�
 - `git reset-tag`：指定したタグをローカルとリモートから削除し、最新コミットに再作成して再プッシュします。
 - `git amend`：直前のコミットを `git commit --amend` で再編集します。追加のオプションはそのまま渡せます。
 - `git squash`：直近の複数コミットを対話的にスカッシュします。引数なしで実行すると最近のコミットを表示して選択できます。
-- `git track`：現在のブランチにトラッキングブランチを設定します。`git pull` でエラーが出る場合に便利です。
+- `git track`：現在のブランチにトラッキングブランチを設定します。リモートブランチがなければ自動的にプッシュします。
 - `git delete-local-branches`：`main` / `master` / `develop` 以外のマージ済みローカルブランチをまとめて削除します。
 - `git undo-last-commit`：直近のコミットを取り消し、変更内容をステージング状態のまま残します。
 - `git tag-diff`：2つのタグ間の差分を取得し、課題IDを抽出してファイルに出力します。リリースノート作成に便利です。
@@ -252,7 +252,7 @@ git delete-local-branches
 ### git track
 
 ```bash
-git track                    # origin/<現在のブランチ名> をトラッキング
+git track                    # origin/<現在のブランチ名> をトラッキング（リモートブランチがなければ自動プッシュ）
 git track upstream           # upstream/<現在のブランチ名> をトラッキング
 git track origin feature-123 # origin/feature-123 をトラッキング
 ```
@@ -260,9 +260,9 @@ git track origin feature-123 # origin/feature-123 をトラッキング
 1. 引数なしで実行すると、現在のブランチに対して `origin/<現在のブランチ名>` をトラッキングブランチとして設定します。
 2. リモート名を指定すると、そのリモートの同名ブランチをトラッキングします（例: `upstream`）。
 3. リモート名とブランチ名の両方を指定すると、そのリモートブランチをトラッキングします。
-4. 指定したリモートブランチが存在しない場合はエラーを表示します。
+4. **指定したリモートブランチが存在しない場合は、自動的に `git push --set-upstream` を実行してリモートブランチを作成し、トラッキング設定を行います。**
 
-`git pull` 実行時に「There is no tracking information for the current branch」というエラーが出た場合に便利です。
+`git pull` 実行時に「There is no tracking information for the current branch」というエラーが出た場合や、新しいブランチを作成後すぐに `git push` したい場合に便利です。リモートブランチがまだ存在しない場合でも、`git track` 一つでプッシュとトラッキング設定が完了します。
 
 ### git undo-last-commit
 

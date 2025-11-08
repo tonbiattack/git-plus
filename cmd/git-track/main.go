@@ -37,8 +37,20 @@ func main() {
 
 	if !exists {
 		fmt.Printf("リモートブランチ %s が見つかりません。\n", remoteRef)
-		fmt.Println("git fetch を実行してリモートの最新情報を取得してください。")
-		os.Exit(1)
+		fmt.Printf("git push --set-upstream %s %s を実行します...\n\n", remote, remoteBranch)
+
+		// git push --set-upstream を実行
+		cmd := exec.Command("git", "push", "--set-upstream", remote, remoteBranch)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		if err := cmd.Run(); err != nil {
+			fmt.Println("\nプッシュに失敗しました:", err)
+			os.Exit(1)
+		}
+
+		fmt.Printf("\nブランチ '%s' を '%s' にプッシュし、トラッキングブランチを設定しました。\n", currentBranch, remoteRef)
+		return
 	}
 
 	// upstream を設定
