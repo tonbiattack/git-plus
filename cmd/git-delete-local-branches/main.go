@@ -78,8 +78,9 @@ func mergedBranches() ([]string, error) {
 		if line == "" {
 			continue
 		}
+		// 現在のブランチ（*が付いている）はスキップ
 		if strings.HasPrefix(line, "*") {
-			line = strings.TrimSpace(strings.TrimPrefix(line, "*"))
+			continue
 		}
 		if line == "" {
 			continue
@@ -130,7 +131,7 @@ func printHelp() {
 
 説明:
   git branch --merged に含まれるマージ済みブランチのうち、
-  main / master / develop 以外のブランチをまとめて削除します。
+  main / master / develop / 現在のブランチ 以外をまとめて削除します。
   削除前に確認プロンプトが表示されます。
 
 オプション:
@@ -140,6 +141,7 @@ func printHelp() {
   - 削除対象のブランチは削除前に一覧表示されます
   - y または yes を入力すると削除が実行されます
   - 未マージのブランチは削除されません
+  - 現在のブランチは自動的に除外されます
 `
 	fmt.Print(help)
 }
