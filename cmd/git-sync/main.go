@@ -102,6 +102,9 @@ func runCommand(name string, args ...string) error {
 // isRebaseInProgress は rebase が進行中かどうかをチェックする
 func isRebaseInProgress() bool {
 	// .git/rebase-merge または .git/rebase-apply ディレクトリの存在を確認
+	// rebase-merge: 通常の rebase 時に作成される一時ディレクトリ
+	// rebase-apply: git am や古い形式の rebase で使用される一時ディレクトリ
+	// これらのディレクトリが存在する = rebase が進行中（コンフリクト等で中断している状態）
 	if _, err := os.Stat(".git/rebase-merge"); err == nil {
 		return true
 	}
