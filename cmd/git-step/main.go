@@ -12,12 +12,14 @@ import (
 
 // AuthorStats はユーザーごとの統計情報
 type AuthorStats struct {
-	Name        string
-	Added       int
-	Deleted     int
-	Net         int // 純増行数 (Added - Deleted)
-	Modified    int // 更新行数 (Added + Deleted)
-	CurrentCode int // 現在のコードベースに残っている行数
+	Name          string
+	Added         int
+	Deleted       int
+	Net           int     // 純増行数 (Added - Deleted)
+	Modified      int     // 更新行数 (Added + Deleted)
+	CurrentCode   int     // 現在のコードベースに残っている行数
+	Commits       int     // コミット数
+	AvgCommitSize float64 // 平均コミットサイズ (Modified / Commits)
 }
 
 func main() {
@@ -94,22 +96,32 @@ func main() {
 	totalAdded := 0
 	totalDeleted := 0
 	totalNet := 0
+	totalModified := 0
+	totalCommits := 0
 	for _, stat := range authorStats {
 		totalAdded += stat.Added
 		totalDeleted += stat.Deleted
 		totalNet += stat.Net
+		totalModified += stat.Modified
+		totalCommits += stat.Commits
 	}
 
 	// 現在のリポジトリの総行数を取得
 	currentLines := getCurrentTotalLines()
 
 	// 現在のコードベースでの各ユーザーの行数を取得（git blameベース）
-	currentCodeStats := getCurrentCodeByAuthor()
+	// 期間指定時は、その期間内のコミットのみを対象とする
+	currentCodeStats := getCurrentCodeByAuthor(sinceArg, untilArg)
 
-	// authorStatsに現在のコード行数を追加
+	// authorStatsに現在のコード行数を追加し、派生指標を計算
 	for i := range authorStats {
 		if lines, exists := currentCodeStats[authorStats[i].Name]; exists {
 			authorStats[i].CurrentCode = lines
+		}
+
+		// 平均コミットサイズを計算
+		if authorStats[i].Commits > 0 {
+			authorStats[i].AvgCommitSize = float64(authorStats[i].Modified) / float64(authorStats[i].Commits)
 		}
 	}
 
@@ -119,10 +131,13 @@ func main() {
 	})
 
 	// 結果を表示
-	displayStats(authorStats, totalAdded, totalDeleted, totalNet, currentLines, sinceArg, untilArg)
+	displayStats(authorStats, totalAdded, totalDeleted, totalNet, totalModified, totalCommits, currentLines, sinceArg, untilArg)
 
 	// ファイルに保存
-	saveToFile(authorStats, totalAdded, totalDeleted, totalNet, currentLines, sinceArg, untilArg)
+	saveToFile(authorStats, totalAdded, totalDeleted, totalNet, totalModified, totalCommits, currentLines, sinceArg, untilArg)
+
+	// CSVファイルに保存
+	saveToCSV(authorStats, totalAdded, totalDeleted, totalNet, totalModified, totalCommits, currentLines, sinceArg, untilArg)
 }
 
 func printHelp() {
@@ -148,7 +163,7 @@ func printHelp() {
 説明:
   リポジトリ全体のステップ数（行数）とユーザーごとの貢献度を集計します。
   デフォルトで初回コミットは除外されます（大量の行数が追加されることが多いため）。
-  結果はステップ数が多い順に表示され、自動的にファイルに保存されます。
+  結果はステップ数が多い順に表示され、自動的にテキストファイルとCSVファイルに保存されます。
 `
 	fmt.Print(help)
 }
@@ -166,6 +181,7 @@ func getAuthorStats(since, until string, excludeInitial bool) []AuthorStats {
 
 	// 作成者ごとに集計
 	authorMap := make(map[string]*AuthorStats)
+	commitCountMap := make(map[string]int) // コミット数を別途カウント
 
 	// git log --numstat の出力を解析
 	// コミットごとに作成者を特定する必要がある
@@ -187,6 +203,7 @@ func getAuthorStats(since, until string, excludeInitial bool) []AuthorStats {
 	lines := strings.Split(string(output), "\n")
 	currentAuthor := ""
 	currentHash := ""
+	processedCommits := make(map[string]bool) // 同じコミットを重複カウントしないため
 
 	for _, line := range lines {
 		if line == "" {
@@ -210,6 +227,13 @@ func getAuthorStats(since, until string, excludeInitial bool) []AuthorStats {
 				if _, exists := authorMap[currentAuthor]; !exists {
 					authorMap[currentAuthor] = &AuthorStats{Name: currentAuthor}
 				}
+
+				// コミット数をカウント（重複を避ける）
+				commitKey := currentAuthor + ":" + currentHash
+				if !processedCommits[commitKey] {
+					commitCountMap[currentAuthor]++
+					processedCommits[commitKey] = true
+				}
 			}
 			continue
 		}
@@ -232,9 +256,10 @@ func getAuthorStats(since, until string, excludeInitial bool) []AuthorStats {
 		}
 	}
 
-	// マップをスライスに変換
+	// マップをスライスに変換し、コミット数を設定
 	stats := make([]AuthorStats, 0, len(authorMap))
 	for _, stat := range authorMap {
+		stat.Commits = commitCountMap[stat.Name]
 		stats = append(stats, *stat)
 	}
 
@@ -264,13 +289,17 @@ func getCurrentTotalLines() int {
 		}
 
 		lines := strings.Split(string(content), "\n")
+		// 末尾が改行で終わっているファイルは空行が追加されるので除外
+		if len(lines) > 0 && lines[len(lines)-1] == "" {
+			lines = lines[:len(lines)-1]
+		}
 		totalLines += len(lines)
 	}
 
 	return totalLines
 }
 
-func getCurrentCodeByAuthor() map[string]int {
+func getCurrentCodeByAuthor(since, until string) map[string]int {
 	// git ls-filesで全ファイルを取得
 	cmd := exec.Command("git", "ls-files")
 	output, err := cmd.Output()
@@ -280,6 +309,12 @@ func getCurrentCodeByAuthor() map[string]int {
 
 	files := strings.Split(strings.TrimSpace(string(output)), "\n")
 	authorLines := make(map[string]int)
+
+	// 期間指定がある場合、その期間内のコミットハッシュを取得
+	var validCommits map[string]bool
+	if since != "" || until != "" {
+		validCommits = getCommitsInPeriod(since, until)
+	}
 
 	for _, file := range files {
 		if file == "" {
@@ -294,11 +329,31 @@ func getCurrentCodeByAuthor() map[string]int {
 		}
 
 		lines := strings.Split(string(blameOutput), "\n")
+		currentCommit := ""
 		for _, line := range lines {
+			// コミットハッシュ行（40文字の16進数で始まる行）
+			// git blame --line-porcelainの最初の行は "<hash> <orig-line> <final-line> <num-lines>" の形式
+			if len(line) >= 40 {
+				fields := strings.Fields(line)
+				if len(fields) > 0 && len(fields[0]) == 40 {
+					// 最初のフィールドがフルハッシュ(40文字)の場合
+					currentCommit = fields[0]
+				}
+			}
+
 			// "author " で始まる行から作成者名を取得
 			if strings.HasPrefix(line, "author ") {
 				author := strings.TrimPrefix(line, "author ")
-				authorLines[author]++
+				
+				// 期間指定がある場合は、その期間内のコミットのみカウント
+				if validCommits != nil {
+					if validCommits[currentCommit] {
+						authorLines[author]++
+					}
+				} else {
+					// 期間指定がない場合は全てカウント
+					authorLines[author]++
+				}
 			}
 		}
 	}
@@ -306,7 +361,35 @@ func getCurrentCodeByAuthor() map[string]int {
 	return authorLines
 }
 
-func displayStats(stats []AuthorStats, totalAdded, totalDeleted, totalNet, currentLines int, since, until string) {
+func getCommitsInPeriod(since, until string) map[string]bool {
+	// 期間内の全コミットハッシュを取得
+	cmdArgs := []string{"log", "--all", "--pretty=format:%H"}
+	if since != "" {
+		cmdArgs = append(cmdArgs, "--since="+since)
+	}
+	if until != "" {
+		cmdArgs = append(cmdArgs, "--until="+until)
+	}
+
+	cmd := exec.Command("git", cmdArgs...)
+	output, err := cmd.Output()
+	if err != nil {
+		return make(map[string]bool)
+	}
+
+	commits := make(map[string]bool)
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	for _, line := range lines {
+		hash := strings.TrimSpace(line)
+		if hash != "" && len(hash) == 40 {
+			commits[hash] = true
+		}
+	}
+
+	return commits
+}
+
+func displayStats(stats []AuthorStats, totalAdded, totalDeleted, totalNet, totalModified, totalCommits, currentLines int, since, until string) {
 	fmt.Println("=== リポジトリステップ数統計 ===")
 	fmt.Println()
 
@@ -336,26 +419,58 @@ func displayStats(stats []AuthorStats, totalAdded, totalDeleted, totalNet, curre
 	fmt.Printf("  追加行数: %s\n", formatNumber(totalAdded))
 	fmt.Printf("  削除行数: %s\n", formatNumber(totalDeleted))
 	fmt.Printf("  純増行数: %s\n", formatNumber(totalNet))
+	fmt.Printf("  更新行数: %s\n", formatNumber(totalModified))
+	fmt.Printf("  総コミット数: %s\n", formatNumber(totalCommits))
 	fmt.Println()
 
 	// ユーザー別統計
 	fmt.Println("【ユーザー別統計】（コード割合が多い順）")
 	fmt.Println()
-	fmt.Printf("%-30s %12s %12s %12s %12s %10s\n", "作成者", "追加", "削除", "更新", "現在行数", "コード割合")
-	fmt.Println(strings.Repeat("-", 97))
+	fmt.Printf("%-30s %10s %10s %10s %10s %8s %10s %8s %8s %8s %10s\n",
+		"作成者", "追加", "削除", "更新", "現在", "コミ数", "平均", "追加比", "削除比", "更新比", "コード割合")
+	fmt.Println(strings.Repeat("-", 138))
+
+	// 期間指定がある場合は、期間内のコード行数の合計を使用
+	totalCurrentCode := currentLines
+	if since != "" || until != "" {
+		totalCurrentCode = 0
+		for _, stat := range stats {
+			totalCurrentCode += stat.CurrentCode
+		}
+	}
 
 	for _, stat := range stats {
 		codeRatio := 0.0
-		if currentLines > 0 {
-			codeRatio = float64(stat.CurrentCode) / float64(currentLines) * 100
+		if totalCurrentCode > 0 {
+			codeRatio = float64(stat.CurrentCode) / float64(totalCurrentCode) * 100
 		}
 
-		fmt.Printf("%-30s %12s %12s %12s %12s %9.1f%%\n",
+		addedRatio := 0.0
+		if totalAdded > 0 {
+			addedRatio = float64(stat.Added) / float64(totalAdded) * 100
+		}
+
+		deletedRatio := 0.0
+		if totalDeleted > 0 {
+			deletedRatio = float64(stat.Deleted) / float64(totalDeleted) * 100
+		}
+
+		modifiedRatio := 0.0
+		if totalModified > 0 {
+			modifiedRatio = float64(stat.Modified) / float64(totalModified) * 100
+		}
+
+		fmt.Printf("%-30s %10s %10s %10s %10s %8s %10.0f %7.1f%% %7.1f%% %7.1f%% %9.1f%%\n",
 			stat.Name,
 			formatNumber(stat.Added),
 			formatNumber(stat.Deleted),
 			formatNumber(stat.Modified),
 			formatNumber(stat.CurrentCode),
+			formatNumber(stat.Commits),
+			stat.AvgCommitSize,
+			addedRatio,
+			deletedRatio,
+			modifiedRatio,
 			codeRatio,
 		)
 	}
@@ -363,7 +478,7 @@ func displayStats(stats []AuthorStats, totalAdded, totalDeleted, totalNet, curre
 	fmt.Println()
 }
 
-func saveToFile(stats []AuthorStats, totalAdded, totalDeleted, totalNet, currentLines int, since, until string) {
+func saveToFile(stats []AuthorStats, totalAdded, totalDeleted, totalNet, totalModified, totalCommits, currentLines int, since, until string) {
 	// ファイル名を生成
 	filename := "git_step"
 	if since != "" {
@@ -407,25 +522,57 @@ func saveToFile(stats []AuthorStats, totalAdded, totalDeleted, totalNet, current
 	fmt.Fprintf(file, "  追加行数: %s\n", formatNumber(totalAdded))
 	fmt.Fprintf(file, "  削除行数: %s\n", formatNumber(totalDeleted))
 	fmt.Fprintf(file, "  純増行数: %s\n", formatNumber(totalNet))
+	fmt.Fprintf(file, "  更新行数: %s\n", formatNumber(totalModified))
+	fmt.Fprintf(file, "  総コミット数: %s\n", formatNumber(totalCommits))
 	fmt.Fprintln(file)
 
 	fmt.Fprintln(file, "【ユーザー別統計】（コード割合が多い順）")
 	fmt.Fprintln(file)
-	fmt.Fprintf(file, "%-30s %12s %12s %12s %12s %10s\n", "作成者", "追加", "削除", "更新", "現在行数", "コード割合")
-	fmt.Fprintln(file, strings.Repeat("-", 97))
+	fmt.Fprintf(file, "%-30s %10s %10s %10s %10s %8s %10s %8s %8s %8s %10s\n",
+		"作成者", "追加", "削除", "更新", "現在", "コミ数", "平均", "追加比", "削除比", "更新比", "コード割合")
+	fmt.Fprintln(file, strings.Repeat("-", 138))
+
+	// 期間指定がある場合は、期間内のコード行数の合計を使用
+	totalCurrentCode := currentLines
+	if since != "" || until != "" {
+		totalCurrentCode = 0
+		for _, stat := range stats {
+			totalCurrentCode += stat.CurrentCode
+		}
+	}
 
 	for _, stat := range stats {
 		codeRatio := 0.0
-		if currentLines > 0 {
-			codeRatio = float64(stat.CurrentCode) / float64(currentLines) * 100
+		if totalCurrentCode > 0 {
+			codeRatio = float64(stat.CurrentCode) / float64(totalCurrentCode) * 100
 		}
 
-		fmt.Fprintf(file, "%-30s %12s %12s %12s %12s %9.1f%%\n",
+		addedRatio := 0.0
+		if totalAdded > 0 {
+			addedRatio = float64(stat.Added) / float64(totalAdded) * 100
+		}
+
+		deletedRatio := 0.0
+		if totalDeleted > 0 {
+			deletedRatio = float64(stat.Deleted) / float64(totalDeleted) * 100
+		}
+
+		modifiedRatio := 0.0
+		if totalModified > 0 {
+			modifiedRatio = float64(stat.Modified) / float64(totalModified) * 100
+		}
+
+		fmt.Fprintf(file, "%-30s %10s %10s %10s %10s %8s %10.0f %7.1f%% %7.1f%% %7.1f%% %9.1f%%\n",
 			stat.Name,
 			formatNumber(stat.Added),
 			formatNumber(stat.Deleted),
 			formatNumber(stat.Modified),
 			formatNumber(stat.CurrentCode),
+			formatNumber(stat.Commits),
+			stat.AvgCommitSize,
+			addedRatio,
+			deletedRatio,
+			modifiedRatio,
 			codeRatio,
 		)
 	}
@@ -433,13 +580,84 @@ func saveToFile(stats []AuthorStats, totalAdded, totalDeleted, totalNet, current
 	fmt.Printf("\n結果を %s に保存しました。\n", filename)
 }
 
-func formatNumber(n int) string {
-	s := strconv.Itoa(n)
-	if n < 0 {
-		s = s[1:]
-		defer func() { s = "-" + s }()
+func saveToCSV(stats []AuthorStats, totalAdded, totalDeleted, totalNet, totalModified, totalCommits, currentLines int, since, until string) {
+	// ファイル名を生成
+	filename := "git_step"
+	if since != "" {
+		filename += "_" + strings.ReplaceAll(since, "-", "")
+	} else {
+		filename += "_all"
+	}
+	filename += "_" + time.Now().Format("2006-01-02") + ".csv"
+
+	file, err := os.Create(filename)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "CSVファイルの作成に失敗しました: %v\n", err)
+		return
+	}
+	defer file.Close()
+
+	// CSVヘッダー
+	fmt.Fprintln(file, "作成者,追加行数,削除行数,純増行数,更新行数,現在行数,コミット数,平均コミットサイズ,追加比率(%),削除比率(%),更新比率(%),コード割合(%)")
+
+	// 期間指定がある場合は、期間内のコード行数の合計を使用
+	totalCurrentCode := currentLines
+	if since != "" || until != "" {
+		totalCurrentCode = 0
+		for _, stat := range stats {
+			totalCurrentCode += stat.CurrentCode
+		}
 	}
 
+	// データ行
+	for _, stat := range stats {
+		codeRatio := 0.0
+		if totalCurrentCode > 0 {
+			codeRatio = float64(stat.CurrentCode) / float64(totalCurrentCode) * 100
+		}
+
+		addedRatio := 0.0
+		if totalAdded > 0 {
+			addedRatio = float64(stat.Added) / float64(totalAdded) * 100
+		}
+
+		deletedRatio := 0.0
+		if totalDeleted > 0 {
+			deletedRatio = float64(stat.Deleted) / float64(totalDeleted) * 100
+		}
+
+		modifiedRatio := 0.0
+		if totalModified > 0 {
+			modifiedRatio = float64(stat.Modified) / float64(totalModified) * 100
+		}
+
+		fmt.Fprintf(file, "%s,%d,%d,%d,%d,%d,%d,%.2f,%.2f,%.2f,%.2f,%.2f\n",
+			stat.Name,
+			stat.Added,
+			stat.Deleted,
+			stat.Net,
+			stat.Modified,
+			stat.CurrentCode,
+			stat.Commits,
+			stat.AvgCommitSize,
+			addedRatio,
+			deletedRatio,
+			modifiedRatio,
+			codeRatio,
+		)
+	}
+
+	fmt.Printf("CSVファイルを %s に保存しました。\n", filename)
+}
+
+func formatNumber(n int) string {
+	sign := ""
+	if n < 0 {
+		sign = "-"
+		n = -n
+	}
+
+	s := strconv.Itoa(n)
 	result := ""
 	for i, digit := range s {
 		if i > 0 && (len(s)-i)%3 == 0 {
@@ -448,5 +666,5 @@ func formatNumber(n int) string {
 		result += string(digit)
 	}
 
-	return result
+	return sign + result
 }
