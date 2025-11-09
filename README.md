@@ -15,6 +15,7 @@ Git の日常操作を少しだけ楽にするためのカスタムコマンド�
 - `git time`：コミット履歴から作業時間を自動集計し、ブランチごとやコミットごとに可視化します。
 - `git step`：リポジトリ全体のステップ数とユーザーごとの貢献度を11の指標で集計します。追加比、削除比、更新比、コード割合など多角的な分析が可能です。
 - `git summary`：`git time` と `git step` の結果を統合し、1行サマリとユーザー別統計を表示します。デイリーレポート作成に便利です。
+- `git sync`：現在のブランチを最新のリモートブランチ（main/master）と同期します。rebaseを使用して履歴をきれいに保ちます。
 
 どれも `git-xxx` という名前のバイナリを用意することで、`git xxx` として呼び出せる Git 拡張サブコマンドです。
 
@@ -53,6 +54,7 @@ go build -o ~/bin/git-recent ./cmd/git-recent
 go build -o ~/bin/git-time ./cmd/git-time
 go build -o ~/bin/git-step ./cmd/git-step
 go build -o ~/bin/git-summary ./cmd/git-summary
+go build -o ~/bin/git-sync ./cmd/git-sync
 
 # PATHに追加（まだ追加していない場合）
 echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
@@ -80,6 +82,7 @@ go build -o "$env:USERPROFILE\bin\git-recent.exe" .\cmd\git-recent
 go build -o "$env:USERPROFILE\bin\git-time.exe" .\cmd\git-time
 go build -o "$env:USERPROFILE\bin\git-step.exe" .\cmd\git-step
 go build -o "$env:USERPROFILE\bin\git-summary.exe" .\cmd\git-summary
+go build -o "$env:USERPROFILE\bin\git-sync.exe" .\cmd\git-sync
 
 # PATHに追加（まだ追加していない場合）
 # システム環境変数に追加する場合は管理者権限で実行
@@ -124,6 +127,7 @@ go install github.com/tonbiattack/git-plus/cmd/git-recent@latest
 go install github.com/tonbiattack/git-plus/cmd/git-time@latest
 go install github.com/tonbiattack/git-plus/cmd/git-step@latest
 go install github.com/tonbiattack/git-plus/cmd/git-summary@latest
+go install github.com/tonbiattack/git-plus/cmd/git-sync@latest
 ```
 
 `@latest` で解決できない場合（モジュールプロキシの都合など）には、`@main` を指定するとリポジトリの最新コミットを直接取得できます。
@@ -149,6 +153,7 @@ go build -o ./bin/git-recent ./cmd/git-recent
 go build -o ./bin/git-time ./cmd/git-time
 go build -o ./bin/git-step ./cmd/git-step
 go build -o ./bin/git-summary ./cmd/git-summary
+go build -o ./bin/git-sync ./cmd/git-sync
 
 # 相対パスで実行
 ./bin/git-newbranch feature/awesome
@@ -171,6 +176,7 @@ go run ./cmd/git-recent
 go run ./cmd/git-time
 go run ./cmd/git-step
 go run ./cmd/git-summary
+go run ./cmd/git-sync
 ```
 
 Windows で PowerShell を利用している場合は、`./bin/git-newbranch` の代わりに `.\bin\git-newbranch.exe` のようにパスを指定してください。
@@ -197,6 +203,7 @@ rm ~/bin/git-recent
 rm ~/bin/git-time
 rm ~/bin/git-step
 rm ~/bin/git-summary
+rm ~/bin/git-sync
 
 # リポジトリも削除する場合
 rm -rf ~/path/to/git-plus
@@ -219,6 +226,7 @@ Remove-Item "$env:USERPROFILE\bin\git-recent.exe"
 Remove-Item "$env:USERPROFILE\bin\git-time.exe"
 Remove-Item "$env:USERPROFILE\bin\git-step.exe"
 Remove-Item "$env:USERPROFILE\bin\git-summary.exe"
+Remove-Item "$env:USERPROFILE\bin\git-sync.exe"
 
 # リポジトリも削除する場合
 Remove-Item -Recurse -Force "C:\path\to\git-plus"
@@ -244,6 +252,7 @@ rm $(go env GOPATH)/bin/git-recent
 rm $(go env GOPATH)/bin/git-time
 rm $(go env GOPATH)/bin/git-step
 rm $(go env GOPATH)/bin/git-summary
+rm $(go env GOPATH)/bin/git-sync
 ```
 
 **Windows (PowerShell):**
@@ -262,6 +271,7 @@ Remove-Item "$env:GOPATH\bin\git-recent.exe"
 Remove-Item "$env:GOPATH\bin\git-time.exe"
 Remove-Item "$env:GOPATH\bin\git-step.exe"
 Remove-Item "$env:GOPATH\bin\git-summary.exe"
+Remove-Item "$env:GOPATH\bin\git-sync.exe"
 ```
 
 ### go install で更新されない場合の対処法
@@ -541,6 +551,43 @@ git step -h                 # ヘルプを表示
 - **平均コミットサイズ**が大きい場合、大規模な変更を一度にコミットする傾向があります。
 
 リポジトリ全体の規模把握や、チームメンバーの貢献度を多角的に分析したい場合に便利です。
+
+### git sync
+
+```bash
+git sync                    # 現在のブランチをリモートのデフォルトブランチと同期
+git sync feature-branch     # 指定したブランチをリモートのデフォルトブランチと同期
+git sync --continue         # コンフリクト解消後に同期を続行
+git sync --abort            # 同期を中止して元の状態に戻す
+git sync -h                 # ヘルプを表示
+```
+
+現在のブランチをリモートのデフォルトブランチ（main/master）の最新状態と同期します。内部的にはrebaseを使用するため、きれいな履歴を保ちながら最新の変更を取り込めます。
+
+**主な機能:**
+- **自動ブランチ検出**: リモートのデフォルトブランチ（origin/main または origin/master）を自動検出します。
+- **rebaseベースの同期**: マージコミットを作らずに、きれいな履歴を維持します。
+- **コンフリクト処理**: コンフリクトが発生した場合は、解消後に`git sync --continue`で続行できます。
+- **安全な中止**: `git sync --abort`で同期をキャンセルし、元の状態に戻せます。
+- **進行中のrebase検出**: すでにrebase中の場合は適切なメッセージを表示します。
+
+**使用例:**
+1. feature-branch で作業中、main の最新変更を取り込みたい場合:
+   ```bash
+   git switch feature-branch
+   git sync
+   # コンフリクトが発生した場合は解消後に:
+   git sync --continue
+   ```
+
+2. 別のブランチを同期したい場合:
+   ```bash
+   git sync develop
+   ```
+
+**注意事項:**
+- リモートへプッシュ済みのコミットをrebaseすると、履歴が書き換わるため、チームで共有しているブランチでは注意が必要です。
+- コンフリクトが発生した場合は、ファイルを編集してコンフリクトを解消し、`git add`した後に`git sync --continue`を実行してください。
 
 ### git summary
 
