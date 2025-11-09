@@ -6,8 +6,29 @@ import (
 	"os/exec"
 )
 
+// main は直前のコミットを修正するメイン処理
+//
+// 処理フロー:
+//  1. ヘルプオプション(-h)のチェック
+//  2. git commit --amend コマンドを実行
+//  3. 標準入出力をパススルーしてエディタを開く
+//  4. コミット修正の結果を返す
+//
+// 使用するgitコマンド:
+//  - git commit --amend: 直前のコミットを修正
+//
+// 実装の詳細:
+//  - すべてのコマンドライン引数を git commit --amend に渡す
+//  - 標準入出力をそのまま接続することで、エディタが正常に動作する
+//  - git コマンドの終了コードをそのまま返す
+//
+// 終了コード:
+//  - 0: 正常終了（コミット修正成功）
+//  - 1: エラー発生（git commit --amend の実行失敗）
+//  - その他: git commit --amend の終了コード
 func main() {
 	// -h オプションのチェック
+	// コマンドライン引数に -h が含まれている場合はヘルプを表示して終了
 	for _, arg := range os.Args[1:] {
 		if arg == "-h" {
 			printHelp()
@@ -15,14 +36,19 @@ func main() {
 		}
 	}
 
+	// git commit --amend に渡す引数を構築
+	// os.Args[1:] に含まれるすべての引数を --amend の後ろに追加
 	args := append([]string{"commit", "--amend"}, os.Args[1:]...)
 
+	// git commit --amend コマンドを準備
 	cmd := exec.Command("git", args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout // 標準出力を接続（コミットメッセージの表示用）
+	cmd.Stderr = os.Stderr // 標準エラー出力を接続（エラーメッセージ表示用）
+	cmd.Stdin = os.Stdin   // 標準入力を接続（エディタでの入力を受け付けるため必須）
 
+	// git commit --amend を実行
 	if err := cmd.Run(); err != nil {
+		// git コマンドが失敗した場合、終了コードを保持して終了
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			os.Exit(exitErr.ExitCode())
 		}
@@ -31,6 +57,12 @@ func main() {
 	}
 }
 
+// printHelp はヘルプメッセージを表示する
+//
+// 実装の詳細:
+//  - git commit --amend のショートカットとしての使い方を説明
+//  - よく使われるオプションを例示
+//  - すべての git commit --amend のオプションが使用可能であることを明記
 func printHelp() {
 	help := `git amend - 直前のコミットを修正
 

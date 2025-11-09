@@ -11,11 +11,45 @@ import (
 	"strings"
 )
 
+// commit はコミット情報を表す構造体
+//
+// フィールド:
+//  - hash: コミットハッシュ（SHA-1）。例: "a1b2c3d4e5f6..."
+//  - subject: コミットメッセージの1行目（サブジェクト）。例: "Add new feature"
+//
+// 使用箇所:
+//  - getRecentCommits: コミット履歴の取得結果を格納
+//  - runSquash: スカッシュ対象のコミット情報を表示
 type commit struct {
 	hash    string
 	subject string
 }
 
+// main は複数のコミットを1つにスカッシュするメイン処理
+//
+// 処理フロー:
+//  1. ヘルプオプション(-h)のチェック
+//  2. コミット数の取得（引数指定 or 対話的選択）
+//  3. 最近のコミット履歴を取得
+//  4. スカッシュ対象のコミットを表示
+//  5. ユーザー確認を求める
+//  6. git reset --soft でコミットを取り消す
+//  7. 新しいコミットメッセージを入力
+//  8. 1つの新しいコミットを作成
+//
+// 使用するgitコマンド:
+//  - git log --oneline -n <数> --format=%H %s: コミット履歴を取得
+//  - git reset --soft HEAD~<数>: 指定数のコミットを取り消し（変更は保持）
+//  - git commit -m <メッセージ>: 新しいコミットを作成
+//
+// 実装の詳細:
+//  - 引数なしの場合は対話的にコミット数を選択可能
+//  - git reset --soft を使用することで変更内容は保持される
+//  - 元のコミットメッセージを参照として表示
+//
+// 終了コード:
+//  - 0: 正常終了（スカッシュ成功またはキャンセル）
+//  - 1: エラー発生（引数不正、コミット取得失敗、スカッシュ失敗など）
 func main() {
 	// -h オプションのチェック
 	for _, arg := range os.Args[1:] {
@@ -84,6 +118,20 @@ func main() {
 	}
 }
 
+// selectCommitsInteractively は対話的にスカッシュするコミット数を選択する
+//
+// 戻り値:
+//  - int: ユーザーが選択したコミット数（0の場合はキャンセル）
+//  - error: エラー情報（コミット履歴取得失敗、入力エラーなど）
+//
+// 使用するgitコマンド:
+//  - getRecentCommits 経由で git log を実行
+//
+// 実装の詳細:
+//  - 最近の10件のコミットを表示
+//  - ユーザーに数値入力を促す
+//  - 0が入力された場合はキャンセル扱い
+//  - 範囲外の値が入力された場合はエラーを返す
 func selectCommitsInteractively() (int, error) {
 	commits, err := getRecentCommits(10) // 最近の10件を表示
 	if err != nil {
@@ -136,6 +184,23 @@ func selectCommitsInteractively() (int, error) {
 	return num, nil
 }
 
+// getRecentCommits は最近のコミット履歴を取得する
+//
+// パラメータ:
+//  - count: 取得するコミット数
+//
+// 戻り値:
+//  - []commit: コミット情報のスライス（新しい順）
+//  - error: エラー情報（git log の実行失敗、パースエラーなど）
+//
+// 使用するgitコマンド:
+//  - git log --oneline -n <count> --format=%H %s: ハッシュとサブジェクトを取得
+//
+// 実装の詳細:
+//  - %H: フルハッシュ（40文字）
+//  - %s: コミットメッセージの1行目
+//  - 出力フォーマット: "<ハッシュ> <サブジェクト>"
+//  - 空行は無視
 func getRecentCommits(count int) ([]commit, error) {
 	cmd := exec.Command("git", "log", "--oneline", "-n", strconv.Itoa(count), "--format=%H %s")
 	output, err := cmd.Output()
@@ -169,6 +234,16 @@ func getRecentCommits(count int) ([]commit, error) {
 	return commits, nil
 }
 
+// askForConfirmation はユーザーに確認を求める
+//
+// 戻り値:
+//  - bool: true（実行する）、false（キャンセル）
+//  - error: 入力読み込みエラー
+//
+// 実装の詳細:
+//  - "y" または "yes"（大文字小文字を区別しない）で true を返す
+//  - それ以外の入力または空入力で false を返す
+//  - EOF（Ctrl+D）も false として扱う
 func askForConfirmation() (bool, error) {
 	fmt.Print("実行しますか？ (y/N): ")
 	reader := bufio.NewReader(os.Stdin)
@@ -185,6 +260,24 @@ func askForConfirmation() (bool, error) {
 	return answer == "y" || answer == "yes", nil
 }
 
+// runSquash はコミットのスカッシュを実行する
+//
+// パラメータ:
+//  - numCommits: スカッシュするコミット数
+//  - commits: 対象のコミット情報スライス
+//
+// 戻り値:
+//  - error: エラー情報（git reset 失敗、コミット作成失敗など）
+//
+// 使用するgitコマンド:
+//  - git reset --soft HEAD~<数>: 指定数のコミットを取り消し（変更は保持）
+//  - git commit -m <メッセージ>: 新しいコミットを作成
+//
+// 実装の詳細:
+//  - git reset --soft を使用して変更内容を保持したままコミットのみ取り消す
+//  - 元のコミットメッセージを参考として表示（古い順）
+//  - ユーザーに新しいコミットメッセージの入力を求める
+//  - 空のメッセージはエラーとして扱う
 func runSquash(numCommits int, commits []commit) error {
 	// git reset --soft を使用してコミットを取り消し
 	resetTarget := fmt.Sprintf("HEAD~%d", numCommits)
@@ -226,6 +319,12 @@ func runSquash(numCommits int, commits []commit) error {
 	return nil
 }
 
+// printHelp はヘルプメッセージを表示する
+//
+// 実装の詳細:
+//  - コミットのスカッシュ機能の使い方を説明
+//  - 対話的モードと引数指定モードの両方を説明
+//  - 最低2つ以上のコミットが必要であることを明記
 func printHelp() {
 	help := `git squash - 複数のコミットをスカッシュ
 
