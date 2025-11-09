@@ -25,8 +25,8 @@ import (
 //     b. 新しいブランチを作成して切り替え
 //
 // 終了コード:
-//  - 0: 正常終了（作成成功、切り替え成功、またはキャンセル）
-//  - 1: エラー発生（引数不足、ブランチ確認失敗、作成/切り替え失敗など）
+//   - 0: 正常終了（作成成功、切り替え成功、またはキャンセル）
+//   - 1: エラー発生（引数不足、ブランチ確認失敗、作成/切り替え失敗など）
 func main() {
 	// -h オプションのチェック
 	// コマンドライン引数に -h が含まれている場合はヘルプを表示して終了
@@ -69,7 +69,7 @@ func main() {
 
 		// 既存ブランチへの切り替えが選択された場合
 		if action == "switch" {
-			switchCmd := exec.Command("git", "checkout", branch)
+			switchCmd := exec.Command("git", "switch", branch)
 			switchCmd.Stdout = os.Stdout // git の出力をそのまま表示
 			switchCmd.Stderr = os.Stderr // git のエラー出力もそのまま表示
 			if err := switchCmd.Run(); err != nil {
@@ -94,8 +94,8 @@ func main() {
 	}
 
 	// 新しいブランチを作成して切り替え
-	// git checkout -b で新しいブランチを作成し、同時に切り替え
-	createCmd := exec.Command("git", "checkout", "-b", branch)
+	// git switch -c で新しいブランチを作成し、同時に切り替え
+	createCmd := exec.Command("git", "switch", "-c", branch)
 	createCmd.Stdout = os.Stdout
 	createCmd.Stderr = os.Stderr
 	if err := createCmd.Run(); err != nil {
@@ -111,23 +111,26 @@ func main() {
 // git show-ref コマンドを使用して、ローカルブランチの存在を確認する。
 //
 // パラメータ:
-//  - name: チェックするブランチ名（例: "feature/awesome", "main"）
+//   - name: チェックするブランチ名（例: "feature/awesome", "main"）
 //
 // 戻り値:
-//  - bool: true = ブランチが存在、false = ブランチが存在しない
-//  - error: git コマンドの実行エラー（終了コード1はブランチ不在として扱う）
+//   - bool: true = ブランチが存在、false = ブランチが存在しない
+//   - error: git コマンドの実行エラー（終了コード1はブランチ不在として扱う）
 //
 // 使用する git コマンド:
-//  git show-ref --verify --quiet refs/heads/<branch-name>
+//
+//	git show-ref --verify --quiet refs/heads/<branch-name>
 //
 // オプションの説明:
-//  --verify: 完全一致する参照のみを確認
-//  --quiet: 出力を抑制（終了コードのみで判定）
+//
+//	--verify: 完全一致する参照のみを確認
+//	--quiet: 出力を抑制（終了コードのみで判定）
 //
 // 終了コードの意味:
-//  0: ブランチが存在
-//  1: ブランチが存在しない
-//  その他: エラー発生
+//
+//	0: ブランチが存在
+//	1: ブランチが存在しない
+//	その他: エラー発生
 func branchExists(name string) (bool, error) {
 	// refs/heads/<branch-name> 形式の参照名を作成
 	ref := fmt.Sprintf("refs/heads/%s", name)
@@ -150,23 +153,24 @@ func branchExists(name string) (bool, error) {
 // askForAction はブランチが既に存在する場合にユーザーに操作を選択させる
 //
 // ユーザーに3つの選択肢を提示し、標準入力から回答を読み取る:
-//  - [r]ecreate: ブランチを削除して作り直す
-//  - [s]witch: 既存のブランチに切り替える
-//  - [c]ancel: 処理を中止する
+//   - [r]ecreate: ブランチを削除して作り直す
+//   - [s]witch: 既存のブランチに切り替える
+//   - [c]ancel: 処理を中止する
 //
 // パラメータ:
-//  - branch: 既に存在するブランチ名
+//   - branch: 既に存在するブランチ名
 //
 // 戻り値:
-//  - string: ユーザーが選択した操作（"recreate", "switch", "cancel"）
-//  - error: 入力読み取り時のエラー（EOF は "cancel" として扱う）
+//   - string: ユーザーが選択した操作（"recreate", "switch", "cancel"）
+//   - error: 入力読み取り時のエラー（EOF は "cancel" として扱う）
 //
 // 入力パターン:
-//  "r" または "recreate" → "recreate"
-//  "s" または "switch" → "switch"
-//  "c" または "cancel" または空入力 → "cancel"
-//  その他 → "cancel"
-//  EOF → "cancel"
+//
+//	"r" または "recreate" → "recreate"
+//	"s" または "switch" → "switch"
+//	"c" または "cancel" または空入力 → "cancel"
+//	その他 → "cancel"
+//	EOF → "cancel"
 func askForAction(branch string) (string, error) {
 	fmt.Printf("ブランチ %s は既に存在します。どうしますか？ [r]ecreate/[s]witch/[c]ancel (r/s/c): ", branch)
 	reader := bufio.NewReader(os.Stdin)
@@ -201,13 +205,14 @@ func askForAction(branch string) (string, error) {
 // エラー（終了コード1）かどうかを判定する。
 //
 // パラメータ:
-//  - err: チェックするエラー
+//   - err: チェックするエラー
 //
 // 戻り値:
-//  - bool: true = ブランチ不在エラー（終了コード1）、false = その他のエラー
+//   - bool: true = ブランチ不在エラー（終了コード1）、false = その他のエラー
 //
 // 使用例:
-//  削除コマンドが失敗しても、ブランチが元々存在しない場合はエラーとして扱わない
+//
+//	削除コマンドが失敗しても、ブランチが元々存在しない場合はエラーとして扱わない
 func isNotFound(err error) bool {
 	exitErr, ok := err.(*exec.ExitError)
 	return ok && exitErr.ExitCode() == 1
@@ -240,7 +245,8 @@ func printHelp() {
 実装詳細:
   ブランチの存在確認: git show-ref --verify --quiet refs/heads/<branch-name>
   ブランチの削除: git branch -D <branch-name>
-  ブランチの作成と切り替え: git checkout -b <branch-name>
+  ブランチの作成と切り替え: git switch -c <branch-name>
+  既存ブランチへの切り替え: git switch <branch-name>
 `
 	fmt.Print(help)
 }
