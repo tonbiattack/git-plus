@@ -27,16 +27,16 @@ type BranchInfo struct {
 //  1. ヘルプオプション(-h)のチェック
 //  2. 最近コミットがあったブランチを最終コミット日時順に取得
 //  3. 現在のブランチを除外してブランチ一覧を表示（最大10件）
-//  4. ユーザーに番号入力を促し、選択されたブランチに git checkout で切り替え
+//  4. ユーザーに番号入力を促し、選択されたブランチに git switch で切り替え
 //
 // 表示されるブランチ:
-//  - 最近コミットがあったブランチを新しい順に表示
-//  - 現在のブランチは自動的に除外される
-//  - 最大10件まで表示
+//   - 最近コミットがあったブランチを新しい順に表示
+//   - 現在のブランチは自動的に除外される
+//   - 最大10件まで表示
 //
 // 終了コード:
-//  - 0: 正常終了（切り替え成功またはキャンセル）
-//  - 1: エラー発生（ブランチ取得失敗、切り替え失敗など）
+//   - 0: 正常終了（切り替え成功またはキャンセル）
+//   - 1: エラー発生（ブランチ取得失敗、切り替え失敗など）
 func main() {
 	// -h オプションのチェック
 	// コマンドライン引数に -h が含まれている場合はヘルプを表示して終了
@@ -141,7 +141,7 @@ func main() {
 	}
 
 	// 選択されたブランチに切り替え
-	// git checkout コマンドを実行
+	// git switch コマンドを実行
 	fmt.Printf("\nブランチ '%s' に切り替えています...\n", selectedBranch)
 	if err := switchBranch(selectedBranch); err != nil {
 		fmt.Printf("エラー: ブランチの切り替えに失敗しました: %v\n", err)
@@ -157,30 +157,31 @@ func main() {
 // git for-each-ref コマンドを使用して、ローカルブランチを最終コミット日時順（新しい順）に取得する。
 //
 // 戻り値:
-//  - []BranchInfo: ブランチ情報のスライス（最新のコミット順にソート済み）
-//  - error: git コマンドの実行エラー
+//   - []BranchInfo: ブランチ情報のスライス（最新のコミット順にソート済み）
+//   - error: git コマンドの実行エラー
 //
 // 実装の詳細:
-//  使用する git コマンド:
-//    git for-each-ref --sort=-committerdate \
-//      --format=%(refname:short)|%(committerdate:relative) \
-//      refs/heads/
 //
-//  オプションの説明:
-//    --sort=-committerdate: 最終コミット日時の降順（新しい順）でソート
-//    --format: 出力フォーマットを "ブランチ名|相対日時" に指定
-//    refs/heads/: ローカルブランチのみを対象（リモートブランチは除外）
+//	使用する git コマンド:
+//	  git for-each-ref --sort=-committerdate \
+//	    --format=%(refname:short)|%(committerdate:relative) \
+//	    refs/heads/
 //
-//  出力例:
-//    feature/awesome|2 hours ago
-//    main|3 days ago
-//    develop|1 week ago
+//	オプションの説明:
+//	  --sort=-committerdate: 最終コミット日時の降順（新しい順）でソート
+//	  --format: 出力フォーマットを "ブランチ名|相対日時" に指定
+//	  refs/heads/: ローカルブランチのみを対象（リモートブランチは除外）
+//
+//	出力例:
+//	  feature/awesome|2 hours ago
+//	  main|3 days ago
+//	  develop|1 week ago
 func getRecentBranches() ([]BranchInfo, error) {
 	// git for-each-ref で最終コミット日時順にブランチを取得
 	cmd := exec.Command("git", "for-each-ref",
-		"--sort=-committerdate",                                 // 最終コミット日時の降順（新しい順）
+		"--sort=-committerdate",                               // 最終コミット日時の降順（新しい順）
 		"--format=%(refname:short)|%(committerdate:relative)", // ブランチ名|相対日時
-		"refs/heads/")                                           // ローカルブランチのみ
+		"refs/heads/") // ローカルブランチのみ
 
 	output, err := cmd.Output()
 	if err != nil {
@@ -220,15 +221,16 @@ func getRecentBranches() ([]BranchInfo, error) {
 // git branch --show-current コマンドを実行して、現在チェックアウト中のブランチ名を取得する。
 //
 // 戻り値:
-//  - string: 現在のブランチ名（例: "main", "feature/awesome"）
-//  - error: git コマンドの実行エラー
+//   - string: 現在のブランチ名（例: "main", "feature/awesome"）
+//   - error: git コマンドの実行エラー
 //
 // 注意:
-//  - detached HEAD 状態の場合は空文字列を返す
-//  - 出力の前後の空白（改行含む）は自動的に削除される
+//   - detached HEAD 状態の場合は空文字列を返す
+//   - 出力の前後の空白（改行含む）は自動的に削除される
 //
 // 使用する git コマンド:
-//  git branch --show-current
+//
+//	git branch --show-current
 func getCurrentBranch() (string, error) {
 	cmd := exec.Command("git", "branch", "--show-current")
 	output, err := cmd.Output()
@@ -241,22 +243,23 @@ func getCurrentBranch() (string, error) {
 
 // switchBranch は指定したブランチに切り替える
 //
-// git checkout コマンドを実行して、指定されたブランチにワーキングツリーを切り替える。
+// git switch コマンドを実行して、指定されたブランチにワーキングツリーを切り替える。
 //
 // パラメータ:
-//  - branch: 切り替え先のブランチ名（例: "main", "feature/awesome"）
+//   - branch: 切り替え先のブランチ名（例: "main", "feature/awesome"）
 //
 // 戻り値:
-//  - error: git コマンドの実行エラー（ブランチが存在しない、未コミットの変更がある等）
+//   - error: git コマンドの実行エラー（ブランチが存在しない、未コミットの変更がある等）
 //
 // 動作:
-//  - git checkout の標準出力と標準エラー出力は、そのまま親プロセスの出力にリダイレクトされる
-//  - これにより、git が出力するメッセージ（例: "Switched to branch 'main'"）がユーザーに表示される
+//   - git switch の標準出力と標準エラー出力は、そのまま親プロセスの出力にリダイレクトされる
+//   - これにより、git が出力するメッセージ（例: "Switched to branch 'main'"）がユーザーに表示される
 //
 // 使用する git コマンド:
-//  git checkout <branch>
+//
+//	git switch <branch>
 func switchBranch(branch string) error {
-	cmd := exec.Command("git", "checkout", branch)
+	cmd := exec.Command("git", "switch", branch)
 	cmd.Stdout = os.Stdout // git の標準出力をそのまま表示
 	cmd.Stderr = os.Stderr // git のエラー出力もそのまま表示
 	return cmd.Run()
