@@ -652,9 +652,80 @@ d.toyoka@kmc-j.com          5          2.7          2        146         56
 
 デイリースタンドアップやウィークリーレポート作成時に、チーム全体の活動状況を素早く把握したい場合に便利です。
 
+## プロジェクト構成
+
+### ディレクトリ構造
+
+```
+.
+├── cmd/               # 各コマンドのエントリーポイント
+│   ├── git-amend/
+│   ├── git-newbranch/
+│   ├── git-sync/
+│   └── ...
+├── internal/          # 内部共通パッケージ
+│   └── gitcmd/       # Gitコマンド実行の共通ユーティリティ
+├── bin/              # ビルド済みバイナリ
+└── go.mod
+```
+
+### 共通パッケージ
+
+#### `internal/gitcmd`
+
+Gitコマンドの実行を共通化するユーティリティパッケージです。
+
+**主な関数:**
+
+- `Run(args ...string) ([]byte, error)`
+  - Gitコマンドを実行して出力を取得します
+  - 例: `output, err := gitcmd.Run("branch", "--show-current")`
+
+- `RunWithIO(args ...string) error`
+  - Gitコマンドを実行し、標準入出力を親プロセスにリダイレクトします
+  - ユーザー入力が必要な場合や、リアルタイム出力が必要な場合に使用
+  - 例: `err := gitcmd.RunWithIO("rebase", "origin/main")`
+
+- `RunQuiet(args ...string) error`
+  - Gitコマンドを静かに実行します（出力は破棄）
+  - 成功/失敗のみを確認したい場合に使用
+  - 例: `err := gitcmd.RunQuiet("show-ref", "--verify", "--quiet", "refs/heads/main")`
+
+- `IsExitError(err error, code int) bool`
+  - エラーが特定の終了コードかどうかをチェックします
+  - 例: `if gitcmd.IsExitError(err, 1) { /* ブランチが存在しない */ }`
+
+**使用例:**
+
+```go
+package main
+
+import (
+    "fmt"
+    "github.com/tonbiattack/git-plus/internal/gitcmd"
+)
+
+func main() {
+    // ブランチ名を取得
+    output, err := gitcmd.Run("branch", "--show-current")
+    if err != nil {
+        fmt.Println("エラー:", err)
+        return
+    }
+    fmt.Println("現在のブランチ:", string(output))
+    
+    // ブランチを切り替え（ユーザーに出力を表示）
+    if err := gitcmd.RunWithIO("switch", "main"); err != nil {
+        fmt.Println("切り替え失敗:", err)
+        return
+    }
+}
+```
+
 ## 開発メモ
 
 - Go 1.22 以降でのビルドを想定しています。
 - ルートに `go.mod` を置き、各コマンドは `cmd/<name>/main.go` に配置しています。
+- 共通処理は `internal/` パッケージに配置しています。
 - 追加のコマンドを作成する場合は `cmd` 配下にディレクトリを増やし、`go build ./cmd/<name>` でビルドしてください。
  

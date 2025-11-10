@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"sort"
 	"strings"
+
+	"github.com/tonbiattack/git-plus/internal/gitcmd"
 )
 
 // StashInfo はスタッシュの詳細情報を表す構造体
@@ -196,8 +198,7 @@ func main() {
 //  - ":" で分割して stash@{N} 部分のみを抽出
 //  - 空行は無視
 func getAllStashes() ([]string, error) {
-	cmd := exec.Command("git", "stash", "list")
-	output, err := cmd.Output()
+	output, err := gitcmd.Run("stash", "list")
 	if err != nil {
 		return nil, err
 	}
@@ -235,8 +236,7 @@ func getAllStashes() ([]string, error) {
 //  - ファイル名をアルファベット順にソート（重複比較の一貫性のため）
 //  - 空行は無視
 func getStashFiles(stash string) ([]string, error) {
-	cmd := exec.Command("git", "stash", "show", "--name-only", stash)
-	output, err := cmd.Output()
+	output, err := gitcmd.Run("stash", "show", "--name-only", stash)
 	if err != nil {
 		return nil, err
 	}
@@ -292,6 +292,8 @@ func getStashContentHash(stash string, files []string) (string, error) {
 	}
 
 	// SHA-1ハッシュを計算
+	// Note: gitcmd.Run doesn't support stdin, so we need to use exec directly here
+	// This is a special case where we need to pipe data to git
 	cmd := exec.Command("git", "hash-object", "--stdin")
 	cmd.Stdin = &buffer
 	output, err := cmd.Output()
@@ -320,8 +322,7 @@ func getStashContentHash(stash string, files []string) (string, error) {
 //  - バイナリファイルも取得可能
 func getStashFileContent(stash, file string) ([]byte, error) {
 	ref := fmt.Sprintf("%s:%s", stash, file)
-	cmd := exec.Command("git", "show", ref)
-	output, err := cmd.Output()
+	output, err := gitcmd.Run("show", ref)
 	if err != nil {
 		return nil, err
 	}
@@ -379,10 +380,9 @@ func findDuplicates(stashInfos []StashInfo) [][]StashInfo {
 //  - 削除失敗時はエラーメッセージを含めて返す
 func deleteStash(index int) error {
 	// git stash drop stash@{N}
-	cmd := exec.Command("git", "stash", "drop", fmt.Sprintf("stash@{%d}", index))
-	output, err := cmd.CombinedOutput()
+	err := gitcmd.RunQuiet("stash", "drop", fmt.Sprintf("stash@{%d}", index))
 	if err != nil {
-		return fmt.Errorf("%v: %s", err, string(output))
+		return err
 	}
 
 	return nil

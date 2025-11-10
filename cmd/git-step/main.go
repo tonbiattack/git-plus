@@ -3,11 +3,12 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/tonbiattack/git-plus/internal/gitcmd"
 )
 
 // AuthorStats はユーザーごとの統計情報を表す構造体
@@ -240,8 +241,7 @@ func getAuthorStats(since, until string, excludeInitial bool) []AuthorStats {
 	// 初回コミットのハッシュを取得（除外する場合）
 	var initialCommitHash string
 	if excludeInitial {
-		cmd := exec.Command("git", "rev-list", "--max-parents=0", "HEAD")
-		output, err := cmd.Output()
+		output, err := gitcmd.Run("rev-list", "--max-parents=0", "HEAD")
 		if err == nil {
 			initialCommitHash = strings.TrimSpace(string(output))
 		}
@@ -261,8 +261,7 @@ func getAuthorStats(since, until string, excludeInitial bool) []AuthorStats {
 		cmdArgs = append(cmdArgs, "--until="+until)
 	}
 
-	cmd := exec.Command("git", cmdArgs...)
-	output, err := cmd.Output()
+	output, err := gitcmd.Run(cmdArgs...)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "git log の実行に失敗しました: %v\n", err)
 		return nil
@@ -350,8 +349,7 @@ func getAuthorStats(since, until string, excludeInitial bool) []AuthorStats {
 func getCurrentTotalLines() int {
 	// git ls-files | xargs cat | wc -l
 	// Windows環境を考慮して、Goで実装
-	cmd := exec.Command("git", "ls-files")
-	output, err := cmd.Output()
+	output, err := gitcmd.Run("ls-files")
 	if err != nil {
 		return 0
 	}
@@ -403,8 +401,7 @@ func getCurrentTotalLines() int {
 //  - 期間指定がない場合は全ての行をカウント
 func getCurrentCodeByAuthor(since, until string) map[string]int {
 	// git ls-filesで全ファイルを取得
-	cmd := exec.Command("git", "ls-files")
-	output, err := cmd.Output()
+	output, err := gitcmd.Run("ls-files")
 	if err != nil {
 		return make(map[string]int)
 	}
@@ -424,8 +421,7 @@ func getCurrentCodeByAuthor(since, until string) map[string]int {
 		}
 
 		// git blameで各行の作成者を取得
-		blameCmd := exec.Command("git", "blame", "--line-porcelain", file)
-		blameOutput, err := blameCmd.Output()
+		blameOutput, err := gitcmd.Run("blame", "--line-porcelain", file)
 		if err != nil {
 			continue
 		}
@@ -489,8 +485,7 @@ func getCommitsInPeriod(since, until string) map[string]bool {
 		cmdArgs = append(cmdArgs, "--until="+until)
 	}
 
-	cmd := exec.Command("git", cmdArgs...)
-	output, err := cmd.Output()
+	output, err := gitcmd.Run(cmdArgs...)
 	if err != nil {
 		return make(map[string]bool)
 	}

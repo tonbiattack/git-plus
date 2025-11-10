@@ -3,7 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/exec"
+
+	"github.com/tonbiattack/git-plus/internal/gitcmd"
 )
 
 func main() {
@@ -49,7 +50,7 @@ func main() {
 
 	// git fetch origin を実行
 	fmt.Printf("origin から最新の変更を取得しています...\n")
-	if err := runCommand("git", "fetch", "origin"); err != nil {
+	if err := gitcmd.RunWithIO("fetch", "origin"); err != nil {
 		fmt.Fprintf(os.Stderr, "fetch に失敗しました: %v\n", err)
 		os.Exit(1)
 	}
@@ -57,7 +58,7 @@ func main() {
 	// git rebase origin/<ブランチ> を実行
 	remoteBranch := fmt.Sprintf("origin/%s", targetBranch)
 	fmt.Printf("%s にリベースしています...\n", remoteBranch)
-	if err := runCommand("git", "rebase", remoteBranch); err != nil {
+	if err := gitcmd.RunWithIO("rebase", remoteBranch); err != nil {
 		// rebase 中にコンフリクトが発生した場合
 		if isRebaseInProgress() {
 			fmt.Println("\nコンフリクトが発生しました。")
@@ -76,27 +77,16 @@ func main() {
 // detectDefaultBranch は origin のデフォルトブランチ (main または master) を検出する
 func detectDefaultBranch() (string, error) {
 	// origin/main の存在確認
-	cmd := exec.Command("git", "show-ref", "--verify", "--quiet", "refs/remotes/origin/main")
-	if err := cmd.Run(); err == nil {
+	if err := gitcmd.RunQuiet("show-ref", "--verify", "--quiet", "refs/remotes/origin/main"); err == nil {
 		return "main", nil
 	}
 
 	// origin/master の存在確認
-	cmd = exec.Command("git", "show-ref", "--verify", "--quiet", "refs/remotes/origin/master")
-	if err := cmd.Run(); err == nil {
+	if err := gitcmd.RunQuiet("show-ref", "--verify", "--quiet", "refs/remotes/origin/master"); err == nil {
 		return "master", nil
 	}
 
 	return "", fmt.Errorf("origin/main も origin/master も見つかりませんでした")
-}
-
-// runCommand は指定されたコマンドを実行し、出力を表示する
-func runCommand(name string, args ...string) error {
-	cmd := exec.Command(name, args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
-	return cmd.Run()
 }
 
 // isRebaseInProgress は rebase が進行中かどうかをチェックする
@@ -116,12 +106,12 @@ func isRebaseInProgress() bool {
 
 // continueRebase は rebase を続行する
 func continueRebase() error {
-	return runCommand("git", "rebase", "--continue")
+	return gitcmd.RunWithIO("rebase", "--continue")
 }
 
 // abortRebase は rebase を中止する
 func abortRebase() error {
-	return runCommand("git", "rebase", "--abort")
+	return gitcmd.RunWithIO("rebase", "--abort")
 }
 
 // printHelp はヘルプメッセージを表示する

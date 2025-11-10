@@ -4,9 +4,10 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
+
+	"github.com/tonbiattack/git-plus/internal/gitcmd"
 )
 
 // BranchInfo はブランチの情報を保持する構造体
@@ -178,12 +179,10 @@ func main() {
 //	  develop|1 week ago
 func getRecentBranches() ([]BranchInfo, error) {
 	// git for-each-ref で最終コミット日時順にブランチを取得
-	cmd := exec.Command("git", "for-each-ref",
+	output, err := gitcmd.Run("for-each-ref",
 		"--sort=-committerdate",                               // 最終コミット日時の降順（新しい順）
 		"--format=%(refname:short)|%(committerdate:relative)", // ブランチ名|相対日時
 		"refs/heads/") // ローカルブランチのみ
-
-	output, err := cmd.Output()
 	if err != nil {
 		return nil, err
 	}
@@ -232,8 +231,7 @@ func getRecentBranches() ([]BranchInfo, error) {
 //
 //	git branch --show-current
 func getCurrentBranch() (string, error) {
-	cmd := exec.Command("git", "branch", "--show-current")
-	output, err := cmd.Output()
+	output, err := gitcmd.Run("branch", "--show-current")
 	if err != nil {
 		return "", err
 	}
@@ -259,10 +257,7 @@ func getCurrentBranch() (string, error) {
 //
 //	git switch <branch>
 func switchBranch(branch string) error {
-	cmd := exec.Command("git", "switch", branch)
-	cmd.Stdout = os.Stdout // git の標準出力をそのまま表示
-	cmd.Stderr = os.Stderr // git のエラー出力もそのまま表示
-	return cmd.Run()
+	return gitcmd.RunWithIO("switch", branch)
 }
 
 // printHelp はコマンドのヘルプメッセージを表示する

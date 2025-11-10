@@ -3,8 +3,9 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
+
+	"github.com/tonbiattack/git-plus/internal/gitcmd"
 )
 
 // main は現在のブランチにトラッキングブランチを設定するメイン処理
@@ -72,11 +73,7 @@ func main() {
 		fmt.Printf("git push --set-upstream %s %s を実行します...\n\n", remote, remoteBranch)
 
 		// git push --set-upstream を実行
-		cmd := exec.Command("git", "push", "--set-upstream", remote, remoteBranch)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-
-		if err := cmd.Run(); err != nil {
+		if err := gitcmd.RunWithIO("push", "--set-upstream", remote, remoteBranch); err != nil {
 			fmt.Println("\nプッシュに失敗しました:", err)
 			os.Exit(1)
 		}
@@ -87,11 +84,7 @@ func main() {
 
 	// upstream を設定
 	upstreamRef := fmt.Sprintf("%s/%s", remote, remoteBranch)
-	cmd := exec.Command("git", "branch", "--set-upstream-to="+upstreamRef, currentBranch)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	if err := cmd.Run(); err != nil {
+	if err := gitcmd.RunWithIO("branch", "--set-upstream-to="+upstreamRef, currentBranch); err != nil {
 		fmt.Println("トラッキングブランチの設定に失敗しました:", err)
 		os.Exit(1)
 	}
@@ -112,8 +105,7 @@ func main() {
 //  - detached HEAD の場合は "HEAD" が返される
 //  - 出力から改行を除去
 func getCurrentBranch() (string, error) {
-	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
-	output, err := cmd.Output()
+	output, err := gitcmd.Run("rev-parse", "--abbrev-ref", "HEAD")
 	if err != nil {
 		return "", err
 	}
@@ -137,12 +129,10 @@ func getCurrentBranch() (string, error) {
 //  - --verify: 参照の存在確認のみ
 //  - 終了コード0: 存在する、1: 存在しない、その他: エラー
 func remoteRefExists(ref string) (bool, error) {
-	cmd := exec.Command("git", "show-ref", "--verify", "--quiet", fmt.Sprintf("refs/remotes/%s", ref))
-	if err := cmd.Run(); err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			if exitErr.ExitCode() == 1 {
-				return false, nil
-			}
+	err := gitcmd.RunQuiet("show-ref", "--verify", "--quiet", fmt.Sprintf("refs/remotes/%s", ref))
+	if err != nil {
+		if gitcmd.IsExitError(err, 1) {
+			return false, nil
 		}
 		return false, err
 	}

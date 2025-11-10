@@ -3,7 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/exec"
+
+	"github.com/tonbiattack/git-plus/internal/gitcmd"
 )
 
 // main は直前のコミットを修正するメイン処理
@@ -40,17 +41,11 @@ func main() {
 	// os.Args[1:] に含まれるすべての引数を --amend の後ろに追加
 	args := append([]string{"commit", "--amend"}, os.Args[1:]...)
 
-	// git commit --amend コマンドを準備
-	cmd := exec.Command("git", args...)
-	cmd.Stdout = os.Stdout // 標準出力を接続（コミットメッセージの表示用）
-	cmd.Stderr = os.Stderr // 標準エラー出力を接続（エラーメッセージ表示用）
-	cmd.Stdin = os.Stdin   // 標準入力を接続（エディタでの入力を受け付けるため必須）
-
 	// git commit --amend を実行
-	if err := cmd.Run(); err != nil {
+	if err := gitcmd.RunWithIO(args...); err != nil {
 		// git コマンドが失敗した場合、終了コードを保持して終了
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			os.Exit(exitErr.ExitCode())
+		if gitcmd.IsExitError(err, 1) {
+			os.Exit(1)
 		}
 		fmt.Fprintf(os.Stderr, "git commit --amend の実行に失敗しました: %v\n", err)
 		os.Exit(1)

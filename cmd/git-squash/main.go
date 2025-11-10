@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
+
+	"github.com/tonbiattack/git-plus/internal/gitcmd"
 )
 
 // commit はコミット情報を表す構造体
@@ -202,8 +203,7 @@ func selectCommitsInteractively() (int, error) {
 //  - 出力フォーマット: "<ハッシュ> <サブジェクト>"
 //  - 空行は無視
 func getRecentCommits(count int) ([]commit, error) {
-	cmd := exec.Command("git", "log", "--oneline", "-n", strconv.Itoa(count), "--format=%H %s")
-	output, err := cmd.Output()
+	output, err := gitcmd.Run("log", "--oneline", "-n", strconv.Itoa(count), "--format=%H %s")
 	if err != nil {
 		return nil, fmt.Errorf("git log の実行に失敗しました: %w", err)
 	}
@@ -281,8 +281,7 @@ func askForConfirmation() (bool, error) {
 func runSquash(numCommits int, commits []commit) error {
 	// git reset --soft を使用してコミットを取り消し
 	resetTarget := fmt.Sprintf("HEAD~%d", numCommits)
-	cmd := exec.Command("git", "reset", "--soft", resetTarget)
-	if err := cmd.Run(); err != nil {
+	if err := gitcmd.RunQuiet("reset", "--soft", resetTarget); err != nil {
 		return fmt.Errorf("git reset --soft の実行に失敗しました: %w", err)
 	}
 
@@ -307,11 +306,7 @@ func runSquash(numCommits int, commits []commit) error {
 	}
 
 	// 新しいコミットを作成
-	commitCmd := exec.Command("git", "commit", "-m", newMessage)
-	commitCmd.Stdout = os.Stdout
-	commitCmd.Stderr = os.Stderr
-
-	if err := commitCmd.Run(); err != nil {
+	if err := gitcmd.RunWithIO("commit", "-m", newMessage); err != nil {
 		return fmt.Errorf("新しいコミットの作成に失敗しました: %w", err)
 	}
 

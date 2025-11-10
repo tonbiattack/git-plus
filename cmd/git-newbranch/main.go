@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"strings"
+
+	"github.com/tonbiattack/git-plus/internal/gitcmd"
 )
 
 // main はブランチを作成または再作成するメイン処理
@@ -69,10 +70,7 @@ func main() {
 
 		// 既存ブランチへの切り替えが選択された場合
 		if action == "switch" {
-			switchCmd := exec.Command("git", "switch", branch)
-			switchCmd.Stdout = os.Stdout // git の出力をそのまま表示
-			switchCmd.Stderr = os.Stderr // git のエラー出力もそのまま表示
-			if err := switchCmd.Run(); err != nil {
+			if err := gitcmd.RunWithIO("switch", branch); err != nil {
 				fmt.Println("ブランチの切り替えに失敗しました:", err)
 				os.Exit(1)
 			}
@@ -85,20 +83,14 @@ func main() {
 	// 既存ブランチを強制削除
 	// git branch -D で強制削除（未マージでも削除される）
 	// ブランチが存在しない場合のエラーは無視
-	delCmd := exec.Command("git", "branch", "-D", branch)
-	delCmd.Stdout = os.Stdout
-	delCmd.Stderr = os.Stderr
-	if err := delCmd.Run(); err != nil && !isNotFound(err) {
+	if err := gitcmd.RunWithIO("branch", "-D", branch); err != nil && !isNotFound(err) {
 		fmt.Println("ブランチの削除に失敗しました:", err)
 		os.Exit(1)
 	}
 
 	// 新しいブランチを作成して切り替え
 	// git switch -c で新しいブランチを作成し、同時に切り替え
-	createCmd := exec.Command("git", "switch", "-c", branch)
-	createCmd.Stdout = os.Stdout
-	createCmd.Stderr = os.Stderr
-	if err := createCmd.Run(); err != nil {
+	if err := gitcmd.RunWithIO("switch", "-c", branch); err != nil {
 		fmt.Println("ブランチ作成に失敗しました:", err)
 		os.Exit(1)
 	}
@@ -134,14 +126,12 @@ func main() {
 func branchExists(name string) (bool, error) {
 	// refs/heads/<branch-name> 形式の参照名を作成
 	ref := fmt.Sprintf("refs/heads/%s", name)
-	cmd := exec.Command("git", "show-ref", "--verify", "--quiet", ref)
+	err := gitcmd.RunQuiet("show-ref", "--verify", "--quiet", ref)
 
-	if err := cmd.Run(); err != nil {
+	if err != nil {
 		// 終了コードが1の場合はブランチが存在しない
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			if exitErr.ExitCode() == 1 {
-				return false, nil // ブランチが存在しない（エラーではない）
-			}
+		if gitcmd.IsExitError(err, 1) {
+			return false, nil // ブランチが存在しない（エラーではない）
 		}
 		// その他のエラーはそのまま返す
 		return false, err
@@ -214,8 +204,7 @@ func askForAction(branch string) (string, error) {
 //
 //	削除コマンドが失敗しても、ブランチが元々存在しない場合はエラーとして扱わない
 func isNotFound(err error) bool {
-	exitErr, ok := err.(*exec.ExitError)
-	return ok && exitErr.ExitCode() == 1
+	return gitcmd.IsExitError(err, 1)
 }
 
 // printHelp はコマンドのヘルプメッセージを表示する

@@ -3,7 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/exec"
+
+	"github.com/tonbiattack/git-plus/internal/gitcmd"
 )
 
 // main は指定されたタグをリセットして最新コミットに再作成するメイン処理
@@ -100,11 +101,8 @@ func main() {
 //  - ignoreError が true の場合、エラーが発生しても nil を返す
 //  - ignoreError が false の場合、エラーをそのまま返す
 func runGitCommand(ignoreError bool, args ...string) error {
-	cmd := exec.Command("git", args...)
-	cmd.Stdout = os.Stdout // gitコマンドの標準出力を表示
-	cmd.Stderr = os.Stderr // gitコマンドの標準エラー出力を表示
-
-	if err := cmd.Run(); err != nil {
+	err := gitcmd.RunWithIO(args...)
+	if err != nil {
 		// エラーを無視するフラグが立っている場合は nil を返す
 		if ignoreError {
 			return nil

@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"strings"
+
+	"github.com/tonbiattack/git-plus/internal/gitcmd"
 )
 
 // main はマージ済みローカルブランチを削除するメイン処理
@@ -72,10 +73,7 @@ func main() {
 	// git branch -d を使用することで、未マージのブランチは削除されない
 	var deleteErrors bool
 	for _, branch := range branches {
-		cmd := exec.Command("git", "branch", "-d", branch)
-		cmd.Stdout = os.Stdout // 削除成功メッセージを標準出力に表示
-		cmd.Stderr = os.Stderr // エラーメッセージを標準エラー出力に表示
-		if err := cmd.Run(); err != nil {
+		if err := gitcmd.RunWithIO("branch", "-d", branch); err != nil {
 			deleteErrors = true
 			fmt.Fprintf(os.Stderr, "ブランチ %s の削除に失敗しました: %v\n", branch, err)
 		}
@@ -111,8 +109,7 @@ func main() {
 // この関数は上記の出力から、* 付きと保護対象を除外したブランチ名のみを返す
 func mergedBranches() ([]string, error) {
 	// git branch --merged でマージ済みブランチの一覧を取得
-	cmd := exec.Command("git", "branch", "--merged")
-	output, err := cmd.Output()
+	output, err := gitcmd.Run("branch", "--merged")
 	if err != nil {
 		return nil, err
 	}

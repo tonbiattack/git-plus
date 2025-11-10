@@ -3,7 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/exec"
+
+	"github.com/tonbiattack/git-plus/internal/gitcmd"
 )
 
 // main は直前のコミットを取り消すメイン処理
@@ -37,11 +38,7 @@ func main() {
 		}
 	}
 
-	cmd := exec.Command("git", "reset", "--soft", "HEAD^")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	if err := cmd.Run(); err != nil {
+	if err := gitcmd.RunWithIO("reset", "--soft", "HEAD^"); err != nil {
 		fmt.Println("コミットの取り消しに失敗しました:", err)
 		os.Exit(1)
 	}

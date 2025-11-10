@@ -3,11 +3,12 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/tonbiattack/git-plus/internal/gitcmd"
 )
 
 // CommitInfo はコミット情報を表す構造体
@@ -220,8 +221,7 @@ func getCommits(since, until, scope string) ([]CommitInfo, error) {
 		args = append(args, "--until="+until)
 	}
 
-	cmd := exec.Command("git", args...)
-	output, err := cmd.Output()
+	output, err := gitcmd.Run(args...)
 	if err != nil {
 		return nil, err
 	}
@@ -285,8 +285,7 @@ func getCommits(since, until, scope string) ([]CommitInfo, error) {
 // git diff-tree を使用してファイル名のみを取得（差分内容は取得しない）
 // マージコミットの場合も含め、すべての変更ファイルを返す
 func getChangedFiles(hash string) []string {
-	cmd := exec.Command("git", "diff-tree", "--no-commit-id", "--name-only", "-r", hash)
-	output, err := cmd.Output()
+	output, err := gitcmd.Run("diff-tree", "--no-commit-id", "--name-only", "-r", hash)
 	if err != nil {
 		return []string{} // エラー時は空配列を返す
 	}
@@ -365,8 +364,7 @@ func extractBranch(refs, hash string) string {
 // git branch --contains を使用して、コミットを含むブランチの最初のものを返す
 // 複数のブランチに含まれる場合は、git が返す最初のブランチを使用
 func getBranchForCommit(hash string) string {
-	cmd := exec.Command("git", "branch", "--contains", hash, "--format=%(refname:short)")
-	output, err := cmd.Output()
+	output, err := gitcmd.Run("branch", "--contains", hash, "--format=%(refname:short)")
 	if err != nil {
 		return "" // エラー時は空文字列を返す
 	}

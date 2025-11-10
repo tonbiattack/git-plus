@@ -3,9 +3,10 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/tonbiattack/git-plus/internal/gitcmd"
 )
 
 // main は2つのタグ間のコミット差分を取得してファイルに出力するメイン処理
@@ -66,15 +67,9 @@ func main() {
 
 	// git logコマンドの実行
 	tagRange := fmt.Sprintf("%s..%s", oldTag, newTag)
-	cmd := exec.Command("git", "log", tagRange, "--no-merges", "--pretty=format:- %s (%an, %ad)", "--date=iso")
-
-	output, err := cmd.Output()
+	output, err := gitcmd.Run("log", tagRange, "--no-merges", "--pretty=format:- %s (%an, %ad)", "--date=iso")
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			fmt.Printf("git logの実行に失敗しました: %s\n", string(exitErr.Stderr))
-		} else {
-			fmt.Printf("git logの実行に失敗しました: %v\n", err)
-		}
+		fmt.Printf("git logの実行に失敗しました: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -117,8 +112,7 @@ func main() {
 //  - タグが存在する場合はエラーなし（nil）を返す
 //  - タグが存在しない場合はエラーを返す
 func validateTag(tag string) error {
-	cmd := exec.Command("git", "rev-parse", "--verify", tag)
-	if err := cmd.Run(); err != nil {
+	if err := gitcmd.RunQuiet("rev-parse", "--verify", tag); err != nil {
 		return err
 	}
 	return nil

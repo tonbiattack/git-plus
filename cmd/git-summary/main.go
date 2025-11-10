@@ -3,11 +3,12 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/tonbiattack/git-plus/internal/gitcmd"
 )
 
 // CommitInfo はコミット情報を表す構造体
@@ -204,8 +205,7 @@ func getCommits(since, until string) []CommitInfo {
 		args = append(args, "--until="+until)
 	}
 
-	cmd := exec.Command("git", args...)
-	output, err := cmd.Output()
+	output, err := gitcmd.Run(args...)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "git logの実行に失敗: %v\n", err)
 		return nil
@@ -256,8 +256,7 @@ func getCommits(since, until string) []CommitInfo {
 func extractBranch(refs, hash string) string {
 	if refs == "" {
 		// git branch --contains で検索
-		cmd := exec.Command("git", "branch", "--contains", hash)
-		output, err := cmd.Output()
+		output, err := gitcmd.Run("branch", "--contains", hash)
 		if err == nil {
 			lines := strings.Split(string(output), "\n")
 			for _, line := range lines {
@@ -330,8 +329,7 @@ func getLinesStats(since, until string) map[string]LinesStats {
 		args = append(args, "--until="+until)
 	}
 
-	cmd := exec.Command("git", args...)
-	output, err := cmd.Output()
+	output, err := gitcmd.Run(args...)
 	if err != nil {
 		return make(map[string]LinesStats)
 	}
