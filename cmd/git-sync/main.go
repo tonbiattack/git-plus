@@ -17,29 +17,29 @@ import (
 //  5. コンフリクト発生時は解決方法を案内
 //
 // 使用するgitコマンド:
-//   - git fetch origin: リモートリポジトリから最新の変更を取得
-//   - git rebase origin/<ブランチ>: 指定ブランチにリベース
-//   - git rebase --continue: コンフリクト解決後にリベースを続行
-//   - git rebase --abort: リベースを中止して元の状態に戻す
+//  - git fetch origin: リモートリポジトリから最新の変更を取得
+//  - git rebase origin/<ブランチ>: 指定ブランチにリベース
+//  - git rebase --continue: コンフリクト解決後にリベースを続行
+//  - git rebase --abort: リベースを中止して元の状態に戻す
 //
 // コマンドライン引数:
-//   - -h: ヘルプメッセージを表示
-//   - --continue: コンフリクト解決後にリベースを続行
-//   - --abort: リベースを中止
-//   - [ブランチ名]: 同期先のブランチ（省略時は main/master を自動判定）
+//  - -h: ヘルプメッセージを表示
+//  - --continue: コンフリクト解決後にリベースを続行
+//  - --abort: リベースを中止
+//  - [ブランチ名]: 同期先のブランチ（省略時は main/master を自動判定）
 //
 // 実装の詳細:
-//   - rebase を使用するため、履歴がきれいに保たれる
-//   - コンフリクト発生時は .git/rebase-merge ディレクトリの存在を確認
-//   - デフォルトブランチの検出は origin/main -> origin/master の順に試行
+//  - rebase を使用するため、履歴がきれいに保たれる
+//  - コンフリクト発生時は .git/rebase-merge ディレクトリの存在を確認
+//  - デフォルトブランチの検出は origin/main -> origin/master の順に試行
 //
 // 終了コード:
-//   - 0: 正常終了（同期完了）
-//   - 1: エラー発生（fetch失敗、rebase失敗、コンフリクト発生など）
+//  - 0: 正常終了（同期完了）
+//  - 1: エラー発生（fetch失敗、rebase失敗、コンフリクト発生など）
 //
 // 注意事項:
-//   - すでにプッシュ済みのコミットがある場合、force push が必要になる可能性がある
-//   - 共有ブランチでの使用には注意が必要
+//  - すでにプッシュ済みのコミットがある場合、force push が必要になる可能性がある
+//  - 共有ブランチでの使用には注意が必要
 func main() {
 	// ヘルプオプションのチェック
 	// -h が指定された場合、使い方を表示して終了
@@ -127,19 +127,19 @@ func main() {
 // detectDefaultBranch は origin のデフォルトブランチ (main または master) を検出する
 //
 // 戻り値:
-//   - string: 検出されたブランチ名（"main" または "master"）
-//   - error: 両方のブランチが存在しない場合のエラー
+//  - string: 検出されたブランチ名（"main" または "master"）
+//  - error: 両方のブランチが存在しない場合のエラー
 //
 // 使用するgitコマンド:
-//   - git show-ref --verify --quiet refs/remotes/origin/main: origin/main の存在確認
-//   - git show-ref --verify --quiet refs/remotes/origin/master: origin/master の存在確認
+//  - git show-ref --verify --quiet refs/remotes/origin/main: origin/main の存在確認
+//  - git show-ref --verify --quiet refs/remotes/origin/master: origin/master の存在確認
 //
 // 実装の詳細:
-//   - まず origin/main の存在を確認（最近のリポジトリは main を使用）
-//   - origin/main が存在しない場合、origin/master を確認（古いリポジトリ）
-//   - 両方とも存在しない場合はエラーを返す
-//   - --quiet オプションで出力を抑制
-//   - --verify オプションで厳密な参照確認
+//  - まず origin/main の存在を確認（最近のリポジトリは main を使用）
+//  - origin/main が存在しない場合、origin/master を確認（古いリポジトリ）
+//  - 両方とも存在しない場合はエラーを返す
+//  - --quiet オプションで出力を抑制
+//  - --verify オプションで厳密な参照確認
 func detectDefaultBranch() (string, error) {
 	// origin/main の存在確認
 	// GitHub などの新しいリポジトリではデフォルトブランチが main になっている
@@ -161,21 +161,21 @@ func detectDefaultBranch() (string, error) {
 // isRebaseInProgress は rebase が進行中かどうかをチェックする
 //
 // 戻り値:
-//   - bool: rebase が進行中の場合 true、それ以外は false
+//  - bool: rebase が進行中の場合 true、それ以外は false
 //
 // 実装の詳細:
-//   - .git/rebase-merge または .git/rebase-apply ディレクトリの存在を確認
-//   - rebase-merge: 通常の rebase 時に作成される一時ディレクトリ
-//   - git rebase, git rebase -i などで使用される
-//   - コンフリクト解決中はこのディレクトリが残る
-//   - rebase-apply: git am や古い形式の rebase で使用される一時ディレクトリ
-//   - パッチ適用時に使用される
-//   - git am --continue, git rebase --continue で処理が再開される
-//   - これらのディレクトリが存在する = rebase が進行中（コンフリクト等で中断している状態）
-//   - os.Stat() でディレクトリの存在を確認（エラーが返らなければ存在する）
+//  - .git/rebase-merge または .git/rebase-apply ディレクトリの存在を確認
+//  - rebase-merge: 通常の rebase 時に作成される一時ディレクトリ
+//    - git rebase, git rebase -i などで使用される
+//    - コンフリクト解決中はこのディレクトリが残る
+//  - rebase-apply: git am や古い形式の rebase で使用される一時ディレクトリ
+//    - パッチ適用時に使用される
+//    - git am --continue, git rebase --continue で処理が再開される
+//  - これらのディレクトリが存在する = rebase が進行中（コンフリクト等で中断している状態）
+//  - os.Stat() でディレクトリの存在を確認（エラーが返らなければ存在する）
 //
 // 使用箇所:
-//   - main関数内で rebase 失敗時にコンフリクトかどうかを判定
+//  - main関数内で rebase 失敗時にコンフリクトかどうかを判定
 func isRebaseInProgress() bool {
 	// .git/rebase-merge ディレクトリの存在確認
 	// git rebase でコンフリクトが発生すると作成される
@@ -194,19 +194,19 @@ func isRebaseInProgress() bool {
 // continueRebase は rebase を続行する
 //
 // 戻り値:
-//   - error: git rebase --continue の実行エラー（成功時は nil）
+//  - error: git rebase --continue の実行エラー（成功時は nil）
 //
 // 使用するgitコマンド:
-//   - git rebase --continue: コンフリクト解決後にリベースを再開
+//  - git rebase --continue: コンフリクト解決後にリベースを再開
 //
 // 実装の詳細:
-//   - ユーザーがコンフリクトを解決した後に実行される
-//   - git add でコンフリクトファイルをステージングした後に実行する必要がある
-//   - 全てのコンフリクトが解決されるまで、この処理を繰り返す
-//   - RunWithIO() を使用してgitの出力をそのまま表示
+//  - ユーザーがコンフリクトを解決した後に実行される
+//  - git add でコンフリクトファイルをステージングした後に実行する必要がある
+//  - 全てのコンフリクトが解決されるまで、この処理を繰り返す
+//  - RunWithIO() を使用してgitの出力をそのまま表示
 //
 // 使用箇所:
-//   - main関数内で --continue オプションが指定された場合
+//  - main関数内で --continue オプションが指定された場合
 func continueRebase() error {
 	return gitcmd.RunWithIO("rebase", "--continue")
 }
@@ -214,20 +214,20 @@ func continueRebase() error {
 // abortRebase は rebase を中止する
 //
 // 戻り値:
-//   - error: git rebase --abort の実行エラー（成功時は nil）
+//  - error: git rebase --abort の実行エラー（成功時は nil）
 //
 // 使用するgitコマンド:
-//   - git rebase --abort: リベースを中止して元の状態に戻す
+//  - git rebase --abort: リベースを中止して元の状態に戻す
 //
 // 実装の詳細:
-//   - リベース開始前の状態に完全に戻す
-//   - .git/rebase-merge ディレクトリを削除
-//   - HEAD を元のコミットに戻す
-//   - コンフリクト解決中の変更は全て破棄される
-//   - RunWithIO() を使用してgitの出力をそのまま表示
+//  - リベース開始前の状態に完全に戻す
+//  - .git/rebase-merge ディレクトリを削除
+//  - HEAD を元のコミットに戻す
+//  - コンフリクト解決中の変更は全て破棄される
+//  - RunWithIO() を使用してgitの出力をそのまま表示
 //
 // 使用箇所:
-//   - main関数内で --abort オプションが指定された場合
+//  - main関数内で --abort オプションが指定された場合
 func abortRebase() error {
 	return gitcmd.RunWithIO("rebase", "--abort")
 }
@@ -235,13 +235,13 @@ func abortRebase() error {
 // printHelp はヘルプメッセージを表示する
 //
 // 実装の詳細:
-//   - 全てのコマンドラインオプションの説明
-//   - 使用例（基本的な同期、ブランチ指定、コンフリクト処理）
-//   - 内部動作の説明（fetch -> rebase の流れ）
-//   - 注意事項（force push の必要性、共有ブランチでの注意点）
+//  - 全てのコマンドラインオプションの説明
+//  - 使用例（基本的な同期、ブランチ指定、コンフリクト処理）
+//  - 内部動作の説明（fetch -> rebase の流れ）
+//  - 注意事項（force push の必要性、共有ブランチでの注意点）
 //
 // 使用箇所:
-//   - main関数内で -h オプションが指定された場合
+//  - main関数内で -h オプションが指定された場合
 func printHelp() {
 	help := `git sync - 現在のブランチを最新のリモートブランチと同期
 
