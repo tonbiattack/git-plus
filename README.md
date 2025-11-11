@@ -14,6 +14,7 @@ Git の日常操作を少しだけ楽にするためのカスタムコマンド�
 - `git recent`：最近使用したブランチを時系列で表示し、番号で選択して簡単に切り替えられます。
 - `git step`：リポジトリ全体のステップ数とユーザーごとの貢献度を11の指標で集計します。追加比、削除比、更新比、コード割合など多角的な分析が可能です。
 - `git sync`：現在のブランチを最新のリモートブランチ（main/master）と同期します。rebaseを使用して履歴をきれいに保ちます。
+- `git pr-merge`：PRの作成からマージ、ブランチ削除、最新の変更取得までを一気に実行します。GitHub CLIを使用した自動化コマンドです。
 
 どれも `git-xxx` という名前のバイナリを用意することで、`git xxx` として呼び出せる Git 拡張サブコマンドです。
 
@@ -51,6 +52,7 @@ go build -o ~/bin/git-stash-cleanup ./cmd/git-stash-cleanup
 go build -o ~/bin/git-recent ./cmd/git-recent
 go build -o ~/bin/git-step ./cmd/git-step
 go build -o ~/bin/git-sync ./cmd/git-sync
+go build -o ~/bin/git-pr-merge ./cmd/git-pr-merge
 
 # PATHに追加（まだ追加していない場合）
 echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
@@ -77,6 +79,7 @@ go build -o "$env:USERPROFILE\bin\git-stash-cleanup.exe" .\cmd\git-stash-cleanup
 go build -o "$env:USERPROFILE\bin\git-recent.exe" .\cmd\git-recent
 go build -o "$env:USERPROFILE\bin\git-step.exe" .\cmd\git-step
 go build -o "$env:USERPROFILE\bin\git-sync.exe" .\cmd\git-sync
+go build -o "$env:USERPROFILE\bin\git-pr-merge.exe" .\cmd\git-pr-merge
 
 # PATHに追加（まだ追加していない場合）
 # システム環境変数に追加する場合は管理者権限で実行
@@ -120,6 +123,7 @@ go install github.com/tonbiattack/git-plus/cmd/git-stash-cleanup@latest
 go install github.com/tonbiattack/git-plus/cmd/git-recent@latest
 go install github.com/tonbiattack/git-plus/cmd/git-step@latest
 go install github.com/tonbiattack/git-plus/cmd/git-sync@latest
+go install github.com/tonbiattack/git-plus/cmd/git-pr-merge@latest
 ```
 
 `@latest` で解決できない場合（モジュールプロキシの都合など）には、`@main` を指定するとリポジトリの最新コミットを直接取得できます。
@@ -144,6 +148,7 @@ go build -o ./bin/git-stash-cleanup ./cmd/git-stash-cleanup
 go build -o ./bin/git-recent ./cmd/git-recent
 go build -o ./bin/git-step ./cmd/git-step
 go build -o ./bin/git-sync ./cmd/git-sync
+go build -o ./bin/git-pr-merge ./cmd/git-pr-merge
 
 # 相対パスで実行
 ./bin/git-newbranch feature/awesome
@@ -165,6 +170,7 @@ go run ./cmd/git-stash-cleanup
 go run ./cmd/git-recent
 go run ./cmd/git-step
 go run ./cmd/git-sync
+go run ./cmd/git-pr-merge
 ```
 
 Windows で PowerShell を利用している場合は、`./bin/git-newbranch` の代わりに `.\bin\git-newbranch.exe` のようにパスを指定してください。
@@ -190,6 +196,7 @@ rm ~/bin/git-stash-cleanup
 rm ~/bin/git-recent
 rm ~/bin/git-step
 rm ~/bin/git-sync
+rm ~/bin/git-pr-merge
 
 # リポジトリも削除する場合
 rm -rf ~/path/to/git-plus
@@ -211,6 +218,7 @@ Remove-Item "$env:USERPROFILE\bin\git-stash-cleanup.exe"
 Remove-Item "$env:USERPROFILE\bin\git-recent.exe"
 Remove-Item "$env:USERPROFILE\bin\git-step.exe"
 Remove-Item "$env:USERPROFILE\bin\git-sync.exe"
+Remove-Item "$env:USERPROFILE\bin\git-pr-merge.exe"
 
 # リポジトリも削除する場合
 Remove-Item -Recurse -Force "C:\path\to\git-plus"
@@ -235,6 +243,7 @@ rm $(go env GOPATH)/bin/git-stash-cleanup
 rm $(go env GOPATH)/bin/git-recent
 rm $(go env GOPATH)/bin/git-step
 rm $(go env GOPATH)/bin/git-sync
+rm $(go env GOPATH)/bin/git-pr-merge
 ```
 
 **Windows (PowerShell):**
@@ -252,6 +261,7 @@ Remove-Item "$env:GOPATH\bin\git-stash-cleanup.exe"
 Remove-Item "$env:GOPATH\bin\git-recent.exe"
 Remove-Item "$env:GOPATH\bin\git-step.exe"
 Remove-Item "$env:GOPATH\bin\git-sync.exe"
+Remove-Item "$env:GOPATH\bin\git-pr-merge.exe"
 ```
 
 ### go install で更新されない場合の対処法
@@ -524,6 +534,63 @@ git sync -h                 # ヘルプを表示
 **注意事項:**
 - リモートへプッシュ済みのコミットをrebaseすると、履歴が書き換わるため、チームで共有しているブランチでは注意が必要です。
 - コンフリクトが発生した場合は、ファイルを編集してコンフリクトを解消し、`git add`した後に`git sync --continue`を実行してください。
+
+### git pr-merge
+
+```bash
+git pr-merge [ベースブランチ名]
+git pr-merge -h              # ヘルプを表示
+```
+
+PRの作成からマージ、ブランチ削除、最新の変更取得までを一気に実行します。GitHub CLIを使用して以下の処理を自動化します:
+
+1. タイトル・本文なしでPRを作成（`--fill`オプション使用）
+2. PRをマージしてブランチを削除（`--merge --delete-branch --auto`）
+3. ベースブランチに切り替え（`git switch`）
+4. 最新の変更を取得（`git pull`）
+
+**引数:**
+- `ベースブランチ名` (省略可): マージ先のブランチ名（省略時は対話的に入力、デフォルト: main）
+
+**使用例:**
+
+```bash
+# feature-branchで作業中
+git add .
+git commit -m "Add new feature"
+git push
+
+# 方法1: ベースブランチを引数で指定
+git pr-merge main
+
+# 方法2: 対話的に入力
+git pr-merge
+# マージ先のベースブランチを入力してください (デフォルト: main): develop
+
+# 確認プロンプト
+# PRを作成してマージしますか？ (y/N): y
+
+# 以下が自動実行される:
+# [1/5] PRを作成しています...
+# ✓ PRを作成しました
+# [2/5] PRをマージしてブランチを削除しています...
+# ✓ PRをマージしてブランチを削除しました
+# [3/5] ブランチ 'main' に切り替えています...
+# ✓ ブランチ 'main' に切り替えました
+# [4/5] 最新の変更を取得しています...
+# ✓ 最新の変更を取得しました
+# ✓ すべての処理が完了しました！
+```
+
+**前提条件:**
+- GitHub CLI (gh) がインストールされていること
+- `gh auth login`でログイン済みであること
+- リモートリポジトリへのプッシュ権限があること
+
+**注意事項:**
+- `--fill`オプションを使用するため、PRのタイトルと本文は最新のコミットメッセージから自動生成されます
+- `--auto`オプションを使用するため、ステータスチェックが通過すると自動的にマージされます
+- マージ後、リモートのブランチは自動的に削除されます
 
 ## プロジェクト構成
 
