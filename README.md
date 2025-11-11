@@ -12,9 +12,7 @@ Git の日常操作を少しだけ楽にするためのカスタムコマンド�
 - `git tag-diff`：2つのタグ間の差分を取得し、課題IDを抽出してファイルに出力します。リリースノート作成に便利です。
 - `git stash-cleanup`：重複するスタッシュを検出して自動的に削除します。各重複グループの最新のものだけを残します。
 - `git recent`：最近使用したブランチを時系列で表示し、番号で選択して簡単に切り替えられます。
-- `git time`：コミット履歴から作業時間を自動集計し、ブランチごとやコミットごとに可視化します。
 - `git step`：リポジトリ全体のステップ数とユーザーごとの貢献度を11の指標で集計します。追加比、削除比、更新比、コード割合など多角的な分析が可能です。
-- `git summary`：`git time` と `git step` の結果を統合し、1行サマリとユーザー別統計を表示します。デイリーレポート作成に便利です。
 - `git sync`：現在のブランチを最新のリモートブランチ（main/master）と同期します。rebaseを使用して履歴をきれいに保ちます。
 
 どれも `git-xxx` という名前のバイナリを用意することで、`git xxx` として呼び出せる Git 拡張サブコマンドです。
@@ -51,9 +49,7 @@ go build -o ~/bin/git-undo-last-commit ./cmd/git-undo-last-commit
 go build -o ~/bin/git-tag-diff ./cmd/git-tag-diff
 go build -o ~/bin/git-stash-cleanup ./cmd/git-stash-cleanup
 go build -o ~/bin/git-recent ./cmd/git-recent
-go build -o ~/bin/git-time ./cmd/git-time
 go build -o ~/bin/git-step ./cmd/git-step
-go build -o ~/bin/git-summary ./cmd/git-summary
 go build -o ~/bin/git-sync ./cmd/git-sync
 
 # PATHに追加（まだ追加していない場合）
@@ -79,9 +75,7 @@ go build -o "$env:USERPROFILE\bin\git-undo-last-commit.exe" .\cmd\git-undo-last-
 go build -o "$env:USERPROFILE\bin\git-tag-diff.exe" .\cmd\git-tag-diff
 go build -o "$env:USERPROFILE\bin\git-stash-cleanup.exe" .\cmd\git-stash-cleanup
 go build -o "$env:USERPROFILE\bin\git-recent.exe" .\cmd\git-recent
-go build -o "$env:USERPROFILE\bin\git-time.exe" .\cmd\git-time
 go build -o "$env:USERPROFILE\bin\git-step.exe" .\cmd\git-step
-go build -o "$env:USERPROFILE\bin\git-summary.exe" .\cmd\git-summary
 go build -o "$env:USERPROFILE\bin\git-sync.exe" .\cmd\git-sync
 
 # PATHに追加（まだ追加していない場合）
@@ -124,9 +118,7 @@ go install github.com/tonbiattack/git-plus/cmd/git-undo-last-commit@latest
 go install github.com/tonbiattack/git-plus/cmd/git-tag-diff@latest
 go install github.com/tonbiattack/git-plus/cmd/git-stash-cleanup@latest
 go install github.com/tonbiattack/git-plus/cmd/git-recent@latest
-go install github.com/tonbiattack/git-plus/cmd/git-time@latest
 go install github.com/tonbiattack/git-plus/cmd/git-step@latest
-go install github.com/tonbiattack/git-plus/cmd/git-summary@latest
 go install github.com/tonbiattack/git-plus/cmd/git-sync@latest
 ```
 
@@ -150,9 +142,7 @@ go build -o ./bin/git-undo-last-commit ./cmd/git-undo-last-commit
 go build -o ./bin/git-tag-diff ./cmd/git-tag-diff
 go build -o ./bin/git-stash-cleanup ./cmd/git-stash-cleanup
 go build -o ./bin/git-recent ./cmd/git-recent
-go build -o ./bin/git-time ./cmd/git-time
 go build -o ./bin/git-step ./cmd/git-step
-go build -o ./bin/git-summary ./cmd/git-summary
 go build -o ./bin/git-sync ./cmd/git-sync
 
 # 相対パスで実行
@@ -173,9 +163,7 @@ go run ./cmd/git-undo-last-commit
 go run ./cmd/git-tag-diff V4.2.00.00 V4.3.00.00
 go run ./cmd/git-stash-cleanup
 go run ./cmd/git-recent
-go run ./cmd/git-time
 go run ./cmd/git-step
-go run ./cmd/git-summary
 go run ./cmd/git-sync
 ```
 
@@ -200,9 +188,7 @@ rm ~/bin/git-undo-last-commit
 rm ~/bin/git-tag-diff
 rm ~/bin/git-stash-cleanup
 rm ~/bin/git-recent
-rm ~/bin/git-time
 rm ~/bin/git-step
-rm ~/bin/git-summary
 rm ~/bin/git-sync
 
 # リポジトリも削除する場合
@@ -223,9 +209,7 @@ Remove-Item "$env:USERPROFILE\bin\git-undo-last-commit.exe"
 Remove-Item "$env:USERPROFILE\bin\git-tag-diff.exe"
 Remove-Item "$env:USERPROFILE\bin\git-stash-cleanup.exe"
 Remove-Item "$env:USERPROFILE\bin\git-recent.exe"
-Remove-Item "$env:USERPROFILE\bin\git-time.exe"
 Remove-Item "$env:USERPROFILE\bin\git-step.exe"
-Remove-Item "$env:USERPROFILE\bin\git-summary.exe"
 Remove-Item "$env:USERPROFILE\bin\git-sync.exe"
 
 # リポジトリも削除する場合
@@ -249,9 +233,7 @@ rm $(go env GOPATH)/bin/git-undo-last-commit
 rm $(go env GOPATH)/bin/git-tag-diff
 rm $(go env GOPATH)/bin/git-stash-cleanup
 rm $(go env GOPATH)/bin/git-recent
-rm $(go env GOPATH)/bin/git-time
 rm $(go env GOPATH)/bin/git-step
-rm $(go env GOPATH)/bin/git-summary
 rm $(go env GOPATH)/bin/git-sync
 ```
 
@@ -268,9 +250,7 @@ Remove-Item "$env:GOPATH\bin\git-undo-last-commit.exe"
 Remove-Item "$env:GOPATH\bin\git-tag-diff.exe"
 Remove-Item "$env:GOPATH\bin\git-stash-cleanup.exe"
 Remove-Item "$env:GOPATH\bin\git-recent.exe"
-Remove-Item "$env:GOPATH\bin\git-time.exe"
 Remove-Item "$env:GOPATH\bin\git-step.exe"
-Remove-Item "$env:GOPATH\bin\git-summary.exe"
 Remove-Item "$env:GOPATH\bin\git-sync.exe"
 ```
 
@@ -450,50 +430,6 @@ git recent -h                    # ヘルプを表示
 
 引数は不要です。頻繁に複数のブランチを行き来する場合や、最近作業していたブランチ名を思い出せない場合に便利です。
 
-### git time
-
-```bash
-git time                              # デフォルト: 過去1週間の作業時間を表示（20件）
-git time -w 1                         # 過去1週間の作業時間
-git time -m 1                         # 過去1ヶ月の作業時間
-git time -y 1                         # 過去1年の作業時間
-git time -w 2 -l 50                   # 過去2週間を50件表示
-git time -w 2 -l 0                    # 過去2週間を全件表示
-git time --scope remotes              # リモート追跡ブランチのみ（再現性高）
-git time --scope local                # ローカルブランチのみ
-git time -h                           # ヘルプを表示
-```
-
-1. 指定された期間のコミット履歴を分析し、作業時間を自動集計してコミット別に表示します。
-2. **同じブランチ・同じ作成者の連続コミット間が2時間以内の場合、その時間を作業時間として計算します。**
-3. 2時間を超える場合や最後のコミットは、デフォルトで30分と見積もります。
-4. **結果は自動的にファイル（`git_time_*.txt`）に保存されます。**
-
-**オプション:**
-- `-w, --weeks <数>`: 過去N週間の作業時間を集計
-- `-m, --months <数>`: 過去Nヶ月の作業時間を集計
-- `-y, --years <数>`: 過去N年の作業時間を集計
-- `--since, -s <日時>`: 集計開始日時（`-w/-m/-y`を指定すると上書きされます）
-- `--until, -u <日時>`: 集計終了日時（デフォルト: 現在）
-- `--scope <範囲>`: 対象範囲を指定（デフォルト: `all`）
-  - `remotes`: リモート追跡ブランチのみ（再現性が高い）
-  - `all`: すべてのブランチ（ローカル+リモート）
-  - `local`: ローカルブランチのみ
-- `--limit, -l <数>`: 表示件数（デフォルト: 20、0で全件表示）
-- `-h`: ヘルプを表示
-
-**主な機能:**
-- **正確な作業時間計算**: ブランチと作成者ごとにグループ化してから時間差を計算するため、異なるブランチや作成者のコミット間の時間が作業時間として誤ってカウントされることがありません。
-- **柔軟な対象範囲**: `--scope`オプションでリモート・ローカル・全体から選択可能。リモート追跡ブランチのみを対象とすることで、`git fetch`後であればどのローカル環境でも同じ結果が得られます。
-- **カスタマイズ可能な表示件数**: `--limit`で表示件数を調整可能。大量のコミットがある場合でも見やすく表示できます。
-
-**注意事項:**
-- `--scope remotes`の場合、事前に`git fetch`を実行して最新のリモート情報を取得してください。
-- stashとdetached HEADは集計から除外されます。
-- 作業時間はコミット間の時間差から推定するため、実際の作業時間とは異なる場合があります。
-
-プロジェクトごとの工数把握や、どのブランチにどれくらい時間を費やしたかを可視化したい場合に便利です。出力ファイルは工数レポートとして活用できます。
-
 ### git step
 
 ```bash
@@ -588,69 +524,6 @@ git sync -h                 # ヘルプを表示
 **注意事項:**
 - リモートへプッシュ済みのコミットをrebaseすると、履歴が書き換わるため、チームで共有しているブランチでは注意が必要です。
 - コンフリクトが発生した場合は、ファイルを編集してコンフリクトを解消し、`git add`した後に`git sync --continue`を実行してください。
-
-### git summary
-
-```bash
-git summary                 # 全期間のサマリを表示
-git summary -w 1            # 過去1週間
-git summary -m 1            # 過去1ヶ月
-git summary -y 1            # 過去1年
-git summary --since 2024-01-01  # 指定日以降
-git summary -h              # ヘルプを表示
-```
-
-1. `git time` と `git step` の結果を統合し、1行のサマリと詳細なユーザー別統計を表示します。
-2. デイリーレポートやウィークリーレポートの作成を簡略化します。
-3. 全体の統計とユーザーごとの統計を一度に確認できます。
-
-**1行サマリの内容:**
-- コミット数
-- ブランチ数
-- 作業時間（時間単位）
-- 変更行数（追加/削除）
-
-**ユーザー別統計の内容:**
-- コミット数
-- 作業時間（時間単位）
-- ブランチ数
-- 追加行数
-- 削除行数
-
-**オプション:**
-- `-w, --weeks <N>`: 過去N週間のサマリを表示
-- `-m, --months <N>`: 過去Nヶ月のサマリを表示
-- `-y, --years <N>`: 過去N年のサマリを表示
-- `-s, --since <日付>`: 開始日を指定（例: 2024-01-01）
-- `-u, --until <日付>`: 終了日を指定（デフォルト: 現在）
-- `-h, --help`: ヘルプを表示
-
-**出力例:**
-
-```
-過去1週間: 117コミット / 27ブランチ / 作業時間44.5h / 変更+12626 -2312行
-
-【ユーザー別統計】
-====================================================================================================
-作成者                      コミット      作業時間(h)      ブランチ数        追加行        削除行
-----------------------------------------------------------------------------------------------------
-Daichi Toyooka             87         28.7         21       8274       1566
-tonbiattack                25         13.1          8       4206        690
-d.toyoka@kmc-j.com          5          2.7          2        146         56
-```
-
-**主な機能:**
-- **1行サマリ**: プロジェクトの活動状況を一目で把握できます。
-- **ユーザー別統計**: 各メンバーの貢献度を多角的に確認できます。
-- **作業時間の自動計算**: コミット間の時間差から作業時間を推定します（`git time` と同じロジック）。
-- **マージコミット対応**: マージコミットの統計も正しく集計します。
-
-**注意事項:**
-- 作業時間は `git time` と同じロジックで計算されます（2時間以内の連続コミットの時間差を使用）。
-- マージコミットの変更行数も含まれます。
-- stash と detached HEAD は集計から除外されます。
-
-デイリースタンドアップやウィークリーレポート作成時に、チーム全体の活動状況を素早く把握したい場合に便利です。
 
 ## プロジェクト構成
 
