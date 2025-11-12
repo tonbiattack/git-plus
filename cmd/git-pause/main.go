@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/tonbiattack/git-plus/internal/pausestate"
+	"github.com/tonbiattack/git-plus/internal/ui"
 )
 
 // git-pause は作業中の変更を一時的に退避し、後で git-resume で復元できるよう
@@ -54,12 +55,9 @@ func main() {
 		}
 
 		fmt.Printf("警告: 既に pause 状態です（%s → %s）\n", state.FromBranch, state.ToBranch)
-		fmt.Print("上書きしますか？ [y/N]: ")
 
-		var response string
-		fmt.Scanln(&response)
-
-		if strings.ToLower(response) != "y" {
+		// 上書きは破壊的操作なのでEnterでno
+		if !ui.Confirm("上書きしますか？", false) {
 			fmt.Println("キャンセルしました")
 			os.Exit(0)
 		}

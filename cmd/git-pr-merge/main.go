@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/tonbiattack/git-plus/internal/ui"
 )
 
 // main はPRの作成からマージ、ブランチ削除、pull までを一気に行うメイン処理
@@ -68,17 +70,8 @@ func main() {
 
 	fmt.Printf("\nベースブランチ: %s\n", baseBranch)
 	fmt.Printf("ヘッドブランチ: %s\n", currentBranch)
-	fmt.Print("\nPRを作成してマージしますか？ (y/N): ")
 
-	reader := bufio.NewReader(os.Stdin)
-	confirm, err := reader.ReadString('\n')
-	if err != nil {
-		fmt.Printf("エラー: 入力の読み込みに失敗しました: %v\n", err)
-		os.Exit(1)
-	}
-
-	confirm = strings.TrimSpace(strings.ToLower(confirm))
-	if confirm != "y" && confirm != "yes" {
+	if !ui.Confirm("\nPRを作成してマージしますか？", true) {
 		fmt.Println("キャンセルしました。")
 		os.Exit(0)
 	}
