@@ -105,8 +105,14 @@ func main() {
 
 	fmt.Printf("✓ タグを作成しました: %s\n", newTag)
 
-	// --push オプションが指定されている場合はプッシュ
-	if push {
+	// --push オプションが指定されている場合、または対話モードでプッシュ確認がYesの場合
+	shouldPush := push
+	if !push && len(args) == 0 {
+		// 対話モードの場合はプッシュするか確認
+		shouldPush = askForConfirmation("\nリモートにプッシュしますか？")
+	}
+
+	if shouldPush {
 		if err := pushTag(newTag); err != nil {
 			fmt.Fprintf(os.Stderr, "エラー: タグのプッシュに失敗: %v\n", err)
 			os.Exit(1)
