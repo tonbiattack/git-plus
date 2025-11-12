@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/tonbiattack/git-plus/internal/ui"
 )
 
 func main() {
@@ -92,7 +94,7 @@ func main() {
 	}
 
 	// 確認プロンプト
-	if !askForConfirmation("タグを作成しますか？") {
+	if !ui.Confirm("タグを作成しますか？", true) {
 		fmt.Println("キャンセルしました")
 		return
 	}
@@ -109,7 +111,7 @@ func main() {
 	shouldPush := push
 	if !push && len(args) == 0 {
 		// 対話モードの場合はプッシュするか確認
-		shouldPush = askForConfirmation("\nリモートにプッシュしますか？")
+		shouldPush = ui.Confirm("\nリモートにプッシュしますか？", true)
 	}
 
 	if shouldPush {
@@ -235,15 +237,6 @@ func pushTag(tag string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
-}
-
-// askForConfirmation は確認プロンプトを表示
-func askForConfirmation(message string) bool {
-	fmt.Printf("%s (y/N): ", message)
-	var response string
-	fmt.Scanln(&response)
-	response = strings.ToLower(strings.TrimSpace(response))
-	return response == "y" || response == "yes"
 }
 
 // printHelp はヘルプメッセージを表示

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/tonbiattack/git-plus/internal/gitcmd"
+	"github.com/tonbiattack/git-plus/internal/ui"
 )
 
 // StashInfo はスタッシュの詳細情報を表す構造体
@@ -130,13 +131,9 @@ func main() {
 	}
 
 	fmt.Printf("合計 %d 個のスタッシュを削除します（各グループの最新のみを保持）。\n", totalToDelete)
-	fmt.Print("続行しますか? (y/N): ")
 
-	var response string
-	fmt.Scanln(&response)
-	response = strings.ToLower(strings.TrimSpace(response))
-
-	if response != "y" && response != "yes" {
+	// 破壊的操作なのでEnterでno
+	if !ui.Confirm("続行しますか?", false) {
 		fmt.Println("キャンセルしました。")
 		os.Exit(0)
 	}

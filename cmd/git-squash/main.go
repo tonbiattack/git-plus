@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/tonbiattack/git-plus/internal/gitcmd"
+	"github.com/tonbiattack/git-plus/internal/ui"
 )
 
 // commit はコミット情報を表す構造体
@@ -103,12 +104,8 @@ func main() {
 		fmt.Printf("  %d. %s %s\n", i+1, c.hash[:8], c.subject)
 	}
 
-	proceed, err := askForConfirmation()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "入力の読み込みに失敗しました:", err)
-		os.Exit(1)
-	}
-	if !proceed {
+	// 破壊的操作なのでEnterでno
+	if !ui.Confirm("実行しますか？", false) {
 		fmt.Println("スカッシュを中止しました。")
 		return
 	}
@@ -232,32 +229,6 @@ func getRecentCommits(count int) ([]commit, error) {
 	}
 
 	return commits, nil
-}
-
-// askForConfirmation はユーザーに確認を求める
-//
-// 戻り値:
-//  - bool: true（実行する）、false（キャンセル）
-//  - error: 入力読み込みエラー
-//
-// 実装の詳細:
-//  - "y" または "yes"（大文字小文字を区別しない）で true を返す
-//  - それ以外の入力または空入力で false を返す
-//  - EOF（Ctrl+D）も false として扱う
-func askForConfirmation() (bool, error) {
-	fmt.Print("実行しますか？ (y/N): ")
-	reader := bufio.NewReader(os.Stdin)
-	input, err := reader.ReadString('\n')
-	if err != nil {
-		if err == io.EOF {
-			input = ""
-		} else {
-			return false, err
-		}
-	}
-
-	answer := strings.ToLower(strings.TrimSpace(input))
-	return answer == "y" || answer == "yes", nil
 }
 
 // runSquash はコミットのスカッシュを実行する

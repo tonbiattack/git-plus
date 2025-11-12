@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/tonbiattack/git-plus/internal/ui"
 )
 
 // main はGitHubリポジトリの作成からクローン、VSCode起動までを実行するメイン処理
@@ -54,16 +56,7 @@ func main() {
 	}
 
 	// 確認
-	fmt.Print("\nGitHubにリポジトリを作成しますか？ (y/N): ")
-	reader := bufio.NewReader(os.Stdin)
-	confirm, err := reader.ReadString('\n')
-	if err != nil {
-		fmt.Printf("エラー: 入力の読み込みに失敗しました: %v\n", err)
-		os.Exit(1)
-	}
-
-	confirm = strings.TrimSpace(strings.ToLower(confirm))
-	if confirm != "y" && confirm != "yes" {
+	if !ui.Confirm("\nGitHubにリポジトリを作成しますか？", true) {
 		fmt.Println("キャンセルしました。")
 		os.Exit(0)
 	}

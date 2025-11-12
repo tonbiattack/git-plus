@@ -4,11 +4,11 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"io"
 	"os"
 	"strings"
 
 	"github.com/tonbiattack/git-plus/internal/gitcmd"
+	"github.com/tonbiattack/git-plus/internal/ui"
 )
 
 // main はマージ済みローカルブランチを削除するメイン処理
@@ -57,14 +57,8 @@ func main() {
 		fmt.Println(b)
 	}
 
-	// ユーザーに削除の確認を求める
-	// y または yes が入力された場合のみ削除処理を実行
-	proceed, err := askForConfirmation()
-	if err != nil {
-		fmt.Println("入力の読み込みに失敗しました:", err)
-		os.Exit(1)
-	}
-	if !proceed {
+	// ユーザーに削除の確認を求める（破壊的操作なのでEnterでno）
+	if !ui.Confirm("本当に削除しますか？", false) {
 		fmt.Println("キャンセルしました。")
 		return
 	}
@@ -174,42 +168,6 @@ func shouldSkipBranch(branch string) bool {
 	default:
 		return false
 	}
-}
-
-// askForConfirmation はユーザーに削除の確認を求める
-//
-// 標準入力から1行を読み取り、ユーザーが削除を承認したかどうかを判定する。
-// "y" または "yes"（大文字小文字を区別しない）が入力された場合のみ true を返す。
-//
-// プロンプト:
-//  "本当に削除しますか？ (y/N): "
-//
-// 戻り値:
-//  - bool: true = 削除を承認、false = 削除をキャンセル
-//  - error: 入力読み取り時のエラー（EOF は空入力として扱う）
-//
-// 動作例:
-//  入力 "y" または "yes" → (true, nil)
-//  入力 "n" または "no" または空入力 → (false, nil)
-//  入力 "Y" または "YES" → (true, nil)  大文字小文字は区別しない
-//  EOF または Ctrl+D → (false, nil)
-func askForConfirmation() (bool, error) {
-	fmt.Print("本当に削除しますか？ (y/N): ")
-	reader := bufio.NewReader(os.Stdin)
-	input, err := reader.ReadString('\n')
-	if err != nil {
-		// EOF（Ctrl+D など）の場合は空入力として扱う
-		if err == io.EOF {
-			input = ""
-		} else {
-			return false, err
-		}
-	}
-
-	// 入力を小文字に変換し、前後の空白（改行含む）を削除
-	answer := strings.ToLower(strings.TrimSpace(input))
-	// "y" または "yes" の場合のみ true を返す
-	return answer == "y" || answer == "yes", nil
 }
 
 // printHelp はコマンドのヘルプメッセージを表示する
