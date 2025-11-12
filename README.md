@@ -15,6 +15,8 @@ Git の日常操作を少しだけ楽にするためのカスタムコマンド�
 - `git step`：リポジトリ全体のステップ数とユーザーごとの貢献度を11の指標で集計します。追加比、削除比、更新比、コード割合など多角的な分析が可能です。
 - `git sync`：現在のブランチを最新のリモートブランチ（main/master）と同期します。rebaseを使用して履歴をきれいに保ちます。
 - `git pr-merge`：PRの作成からマージ、ブランチ削除、最新の変更取得までを一気に実行します。GitHub CLIを使用した自動化コマンドです。
+- `git pause`：現在の作業を一時保存してブランチを切り替えます。変更をスタッシュして、別のブランチでの作業を開始できます。
+- `git resume`：git pause で保存した作業を復元します。元のブランチに戻り、スタッシュから変更を復元します。
 
 どれも `git-xxx` という名前のバイナリを用意することで、`git xxx` として呼び出せる Git 拡張サブコマンドです。
 
@@ -53,6 +55,8 @@ go build -o ~/bin/git-recent ./cmd/git-recent
 go build -o ~/bin/git-step ./cmd/git-step
 go build -o ~/bin/git-sync ./cmd/git-sync
 go build -o ~/bin/git-pr-merge ./cmd/git-pr-merge
+go build -o ~/bin/git-pause ./cmd/git-pause
+go build -o ~/bin/git-resume ./cmd/git-resume
 
 # PATHに追加（まだ追加していない場合）
 echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
@@ -80,6 +84,8 @@ go build -o "$env:USERPROFILE\bin\git-recent.exe" .\cmd\git-recent
 go build -o "$env:USERPROFILE\bin\git-step.exe" .\cmd\git-step
 go build -o "$env:USERPROFILE\bin\git-sync.exe" .\cmd\git-sync
 go build -o "$env:USERPROFILE\bin\git-pr-merge.exe" .\cmd\git-pr-merge
+go build -o "$env:USERPROFILE\bin\git-pause.exe" .\cmd\git-pause
+go build -o "$env:USERPROFILE\bin\git-resume.exe" .\cmd\git-resume
 
 # PATHに追加（まだ追加していない場合）
 # システム環境変数に追加する場合は管理者権限で実行
@@ -124,6 +130,8 @@ go install github.com/tonbiattack/git-plus/cmd/git-recent@latest
 go install github.com/tonbiattack/git-plus/cmd/git-step@latest
 go install github.com/tonbiattack/git-plus/cmd/git-sync@latest
 go install github.com/tonbiattack/git-plus/cmd/git-pr-merge@latest
+go install github.com/tonbiattack/git-plus/cmd/git-pause@latest
+go install github.com/tonbiattack/git-plus/cmd/git-resume@latest
 ```
 
 `@latest` で解決できない場合（モジュールプロキシの都合など）には、`@main` を指定するとリポジトリの最新コミットを直接取得できます。
@@ -149,6 +157,8 @@ go build -o ./bin/git-recent ./cmd/git-recent
 go build -o ./bin/git-step ./cmd/git-step
 go build -o ./bin/git-sync ./cmd/git-sync
 go build -o ./bin/git-pr-merge ./cmd/git-pr-merge
+go build -o ./bin/git-pause ./cmd/git-pause
+go build -o ./bin/git-resume ./cmd/git-resume
 
 # 相対パスで実行
 ./bin/git-newbranch feature/awesome
@@ -171,6 +181,8 @@ go run ./cmd/git-recent
 go run ./cmd/git-step
 go run ./cmd/git-sync
 go run ./cmd/git-pr-merge
+go run ./cmd/git-pause main
+go run ./cmd/git-resume
 ```
 
 Windows で PowerShell を利用している場合は、`./bin/git-newbranch` の代わりに `.\bin\git-newbranch.exe` のようにパスを指定してください。
@@ -197,6 +209,8 @@ rm ~/bin/git-recent
 rm ~/bin/git-step
 rm ~/bin/git-sync
 rm ~/bin/git-pr-merge
+rm ~/bin/git-pause
+rm ~/bin/git-resume
 
 # リポジトリも削除する場合
 rm -rf ~/path/to/git-plus
@@ -219,6 +233,8 @@ Remove-Item "$env:USERPROFILE\bin\git-recent.exe"
 Remove-Item "$env:USERPROFILE\bin\git-step.exe"
 Remove-Item "$env:USERPROFILE\bin\git-sync.exe"
 Remove-Item "$env:USERPROFILE\bin\git-pr-merge.exe"
+Remove-Item "$env:USERPROFILE\bin\git-pause.exe"
+Remove-Item "$env:USERPROFILE\bin\git-resume.exe"
 
 # リポジトリも削除する場合
 Remove-Item -Recurse -Force "C:\path\to\git-plus"
@@ -244,6 +260,8 @@ rm $(go env GOPATH)/bin/git-recent
 rm $(go env GOPATH)/bin/git-step
 rm $(go env GOPATH)/bin/git-sync
 rm $(go env GOPATH)/bin/git-pr-merge
+rm $(go env GOPATH)/bin/git-pause
+rm $(go env GOPATH)/bin/git-resume
 ```
 
 **Windows (PowerShell):**
@@ -262,6 +280,8 @@ Remove-Item "$env:GOPATH\bin\git-recent.exe"
 Remove-Item "$env:GOPATH\bin\git-step.exe"
 Remove-Item "$env:GOPATH\bin\git-sync.exe"
 Remove-Item "$env:GOPATH\bin\git-pr-merge.exe"
+Remove-Item "$env:GOPATH\bin\git-pause.exe"
+Remove-Item "$env:GOPATH\bin\git-resume.exe"
 ```
 
 ### go install で更新されない場合の対処法
@@ -534,6 +554,88 @@ git sync -h                 # ヘルプを表示
 **注意事項:**
 - リモートへプッシュ済みのコミットをrebaseすると、履歴が書き換わるため、チームで共有しているブランチでは注意が必要です。
 - コンフリクトが発生した場合は、ファイルを編集してコンフリクトを解消し、`git add`した後に`git sync --continue`を実行してください。
+
+### git pause
+
+```bash
+git pause main              # 現在の作業を保存してmainに切り替え
+git pause develop           # 現在の作業を保存してdevelopに切り替え
+git pause -h                # ヘルプを表示
+```
+
+現在の作業を一時保存してブランチを切り替えます。変更をスタッシュして、別のブランチでの作業を開始できます。
+
+**主な機能:**
+- **変更の自動保存**: コミットされていない変更を自動的にスタッシュに保存します。
+- **状態管理**: どのブランチからどのブランチに切り替えたかを記録します（`~/.git-plus/pause-state.json`）。
+- **安全な上書き確認**: 既に pause 状態の場合は上書き確認を行います。
+- **変更なしの最適化**: 変更がない場合はスタッシュせずにブランチ切り替えのみ実行します。
+
+**使用例:**
+
+```bash
+# feature-branchで作業中、急にmainで作業が必要になった場合
+git pause main
+
+# 以下が自動実行される:
+# 変更を保存中...
+# ✓ 変更を保存しました: stash@{0}
+# ブランチを切り替え中: feature-branch → main
+# ✓ main に切り替えました
+#
+# 元のブランチに戻るには: git resume
+```
+
+**動作:**
+1. 現在のブランチ名を記録
+2. 変更があればスタッシュに保存（メッセージ: `git-pause: from <現在のブランチ>`）
+3. 状態を `~/.git-plus/pause-state.json` に保存
+4. 指定されたブランチに切り替え
+
+**注意事項:**
+- 既に pause 状態の場合は上書き確認が表示されます
+- 変更がない場合はスタッシュせずにブランチ切り替えのみ実行されます
+
+### git resume
+
+```bash
+git resume                  # git pause で保存した作業を復元
+git resume -h               # ヘルプを表示
+```
+
+git pause で保存した作業を復元します。元のブランチに戻り、スタッシュから変更を復元します。
+
+**主な機能:**
+- **元のブランチに自動復帰**: pause 時のブランチに自動的に切り替わります。
+- **スタッシュの自動復元**: 保存されていた変更を自動的に復元します。
+- **状態のクリーンアップ**: 復元後、状態ファイルを自動的に削除します。
+- **エラーハンドリング**: スタッシュの復元に失敗した場合でも、適切なメッセージを表示します。
+
+**使用例:**
+
+```bash
+# mainでの作業が終わり、元のfeature-branchに戻る場合
+git resume
+
+# 以下が自動実行される:
+# 元のブランチに戻ります: main → feature-branch
+# ブランチを切り替え中: main → feature-branch
+# ✓ feature-branch に切り替えました
+# 変更を復元中...
+# ✓ 変更を復元しました
+#
+# ✓ 作業の復元が完了しました
+```
+
+**動作:**
+1. 状態ファイル（`~/.git-plus/pause-state.json`）を読み込み
+2. 元のブランチに切り替え
+3. スタッシュから変更を復元（`git stash pop`）
+4. 状態ファイルを削除
+
+**注意事項:**
+- pause 状態がない場合はエラーメッセージを表示します
+- スタッシュの復元に失敗した場合は警告を表示し、手動での復元を促します
 
 ### git pr-merge
 
