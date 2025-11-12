@@ -18,6 +18,7 @@ Git の日常操作を少しだけ楽にするためのカスタムコマンド�
 - `git pause`：現在の作業を一時保存してブランチを切り替えます。変更をスタッシュして、別のブランチでの作業を開始できます。
 - `git resume`：git pause で保存した作業を復元します。元のブランチに戻り、スタッシュから変更を復元します。
 - `git create-repository`：GitHubリポジトリの作成からクローン、VSCode起動までを自動化します。public/private選択、説明の指定が可能です。
+- `git new-tag`：セマンティックバージョニングに従って新しいタグを自動生成します。feature/bug指定でminor/patchを自動判定します。
 
 どれも `git-xxx` という名前のバイナリを用意することで、`git xxx` として呼び出せる Git 拡張サブコマンドです。
 
@@ -59,6 +60,7 @@ go build -o ~/bin/git-pr-merge ./cmd/git-pr-merge
 go build -o ~/bin/git-pause ./cmd/git-pause
 go build -o ~/bin/git-resume ./cmd/git-resume
 go build -o ~/bin/git-create-repository ./cmd/git-create-repository
+go build -o ~/bin/git-new-tag ./cmd/git-new-tag
 
 # PATHに追加（まだ追加していない場合）
 echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
@@ -89,6 +91,7 @@ go build -o "$env:USERPROFILE\bin\git-pr-merge.exe" .\cmd\git-pr-merge
 go build -o "$env:USERPROFILE\bin\git-pause.exe" .\cmd\git-pause
 go build -o "$env:USERPROFILE\bin\git-resume.exe" .\cmd\git-resume
 go build -o "$env:USERPROFILE\bin\git-create-repository.exe" .\cmd\git-create-repository
+go build -o "$env:USERPROFILE\bin\git-new-tag.exe" .\cmd\git-new-tag
 
 # PATHに追加（まだ追加していない場合）
 # システム環境変数に追加する場合は管理者権限で実行
@@ -135,6 +138,7 @@ go install github.com/tonbiattack/git-plus/cmd/git-sync@latest
 go install github.com/tonbiattack/git-plus/cmd/git-pr-merge@latest
 go install github.com/tonbiattack/git-plus/cmd/git-pause@latest
 go install github.com/tonbiattack/git-plus/cmd/git-resume@latest
+go install github.com/tonbiattack/git-plus/cmd/git-new-tag@latest
 ```
 
 `@latest` で解決できない場合（モジュールプロキシの都合など）には、`@main` を指定するとリポジトリの最新コミットを直接取得できます。
@@ -162,6 +166,7 @@ go build -o ./bin/git-sync ./cmd/git-sync
 go build -o ./bin/git-pr-merge ./cmd/git-pr-merge
 go build -o ./bin/git-pause ./cmd/git-pause
 go build -o ./bin/git-resume ./cmd/git-resume
+go build -o ./bin/git-new-tag ./cmd/git-new-tag
 
 # 相対パスで実行
 ./bin/git-newbranch feature/awesome
@@ -186,6 +191,7 @@ go run ./cmd/git-sync
 go run ./cmd/git-pr-merge
 go run ./cmd/git-pause main
 go run ./cmd/git-resume
+go run ./cmd/git-new-tag feature
 ```
 
 Windows で PowerShell を利用している場合は、`./bin/git-newbranch` の代わりに `.\bin\git-newbranch.exe` のようにパスを指定してください。
@@ -214,6 +220,7 @@ rm ~/bin/git-sync
 rm ~/bin/git-pr-merge
 rm ~/bin/git-pause
 rm ~/bin/git-resume
+rm ~/bin/git-new-tag
 
 # リポジトリも削除する場合
 rm -rf ~/path/to/git-plus
@@ -238,6 +245,7 @@ Remove-Item "$env:USERPROFILE\bin\git-sync.exe"
 Remove-Item "$env:USERPROFILE\bin\git-pr-merge.exe"
 Remove-Item "$env:USERPROFILE\bin\git-pause.exe"
 Remove-Item "$env:USERPROFILE\bin\git-resume.exe"
+Remove-Item "$env:USERPROFILE\bin\git-new-tag.exe"
 
 # リポジトリも削除する場合
 Remove-Item -Recurse -Force "C:\path\to\git-plus"
@@ -265,6 +273,7 @@ rm $(go env GOPATH)/bin/git-sync
 rm $(go env GOPATH)/bin/git-pr-merge
 rm $(go env GOPATH)/bin/git-pause
 rm $(go env GOPATH)/bin/git-resume
+rm $(go env GOPATH)/bin/git-new-tag
 ```
 
 **Windows (PowerShell):**
@@ -285,6 +294,7 @@ Remove-Item "$env:GOPATH\bin\git-sync.exe"
 Remove-Item "$env:GOPATH\bin\git-pr-merge.exe"
 Remove-Item "$env:GOPATH\bin\git-pause.exe"
 Remove-Item "$env:GOPATH\bin\git-resume.exe"
+Remove-Item "$env:GOPATH\bin\git-new-tag.exe"
 ```
 
 ### go install で更新されない場合の対処法
@@ -639,6 +649,89 @@ git resume
 **注意事項:**
 - pause 状態がない場合はエラーメッセージを表示します
 - スタッシュの復元に失敗した場合は警告を表示し、手動での復元を促します
+
+### git new-tag
+
+```bash
+git new-tag feature          # 機能追加（minor）
+git new-tag bug              # バグ修正（patch）
+git new-tag major            # 破壊的変更
+git new-tag f --push         # 省略形 + プッシュ
+git new-tag -h               # ヘルプを表示
+```
+
+セマンティックバージョニングに従って新しいタグを自動生成します。現在の最新タグから自動的に次のバージョンを計算します。
+
+**主な機能:**
+- **自動バージョン計算**: 最新タグ（v1.2.3）から次のバージョンを自動計算
+- **直感的なタイプ指定**: feature/bug で minor/patch を自動判定
+- **省略形サポート**: f（feature）、b（bug）、m（major）など
+- **確認プロンプト**: 誤ったタグ作成を防ぐ
+- **自動プッシュ**: `--push` オプションでリモートへ自動プッシュ
+- **対話的モード**: 引数なしで実行時に選択肢を表示
+
+**バージョンタイプ:**
+
+| タイプ | 説明 | 例 (v1.2.3 →) |
+|-------|------|---------------|
+| `major`, `m`, `breaking` | メジャーバージョンアップ | v2.0.0 |
+| `minor`, `n`, `feature`, `f` | マイナーバージョンアップ | v1.3.0 |
+| `patch`, `p`, `bug`, `b`, `fix` | パッチバージョンアップ | v1.2.4 |
+
+**オプション:**
+- `-m, --message <msg>`: タグメッセージを指定（アノテーテッドタグを作成）
+- `--push`: 作成後に自動的にリモートへプッシュ
+- `--dry-run`: 実際には作成せず、次のバージョンだけを表示
+
+**使用例:**
+
+```bash
+# 機能追加のタグを作成
+git new-tag feature
+# 現在のタグ: v1.2.3
+# 新しいタグ: v1.3.0 (MINOR)
+# タグを作成しますか？ (y/N): y
+# ✓ タグを作成しました: v1.3.0
+
+# バグ修正のタグを作成してプッシュ
+git new-tag bug --push
+# ✓ タグを作成しました: v1.2.4
+# ✓ リモートにプッシュしました: v1.2.4
+
+# 省略形を使用
+git new-tag f              # feature と同じ
+git new-tag b              # bug と同じ
+
+# メッセージ付きで作成
+git new-tag feature -m "Add awesome feature"
+
+# ドライラン（確認のみ）
+git new-tag major --dry-run
+# 現在のタグ: v1.2.3
+# 次のバージョン: v2.0.0 (MAJOR)
+# (--dry-run のため、タグは作成されません)
+
+# 対話的モード
+git new-tag
+# 新しいタグのタイプを選択してください:
+#   [1] major   - v2.0.0 (破壊的変更)
+#   [2] minor   - v1.3.0 (機能追加)
+#   [3] patch   - v1.2.4 (バグ修正)
+# 選択 (1-3): 2
+```
+
+**動作:**
+1. 最新のタグを取得（`git describe --tags --abbrev=0`）
+2. バージョン番号を解析（v1.2.3 → MAJOR=1, MINOR=2, PATCH=3）
+3. 指定されたタイプに応じて新しいバージョンを計算
+4. 確認プロンプトを表示
+5. タグを作成（メッセージありの場合はアノテーテッドタグ）
+6. `--push` オプションがある場合はリモートへプッシュ
+
+**注意事項:**
+- タグが存在しない場合はエラーになります。最初のタグは手動で作成してください（例: `git tag v0.1.0`）
+- セマンティックバージョニング（v1.2.3形式）に従ったタグが必要です
+- リモートへのプッシュは `--push` オプションを指定した場合のみ実行されます
 
 ### git pr-merge
 
