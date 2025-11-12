@@ -17,6 +17,7 @@ Git の日常操作を少しだけ楽にするためのカスタムコマンド�
 - `git pr-merge`：PRの作成からマージ、ブランチ削除、最新の変更取得までを一気に実行します。GitHub CLIを使用した自動化コマンドです。
 - `git pause`：現在の作業を一時保存してブランチを切り替えます。変更をスタッシュして、別のブランチでの作業を開始できます。
 - `git resume`：git pause で保存した作業を復元します。元のブランチに戻り、スタッシュから変更を復元します。
+- `git create-repository`：GitHubリポジトリの作成からクローン、VSCode起動までを自動化します。public/private選択、説明の指定が可能です。
 
 どれも `git-xxx` という名前のバイナリを用意することで、`git xxx` として呼び出せる Git 拡張サブコマンドです。
 
@@ -57,6 +58,7 @@ go build -o ~/bin/git-sync ./cmd/git-sync
 go build -o ~/bin/git-pr-merge ./cmd/git-pr-merge
 go build -o ~/bin/git-pause ./cmd/git-pause
 go build -o ~/bin/git-resume ./cmd/git-resume
+go build -o ~/bin/git-create-repository ./cmd/git-create-repository
 
 # PATHに追加（まだ追加していない場合）
 echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
@@ -86,6 +88,7 @@ go build -o "$env:USERPROFILE\bin\git-sync.exe" .\cmd\git-sync
 go build -o "$env:USERPROFILE\bin\git-pr-merge.exe" .\cmd\git-pr-merge
 go build -o "$env:USERPROFILE\bin\git-pause.exe" .\cmd\git-pause
 go build -o "$env:USERPROFILE\bin\git-resume.exe" .\cmd\git-resume
+go build -o "$env:USERPROFILE\bin\git-create-repository.exe" .\cmd\git-create-repository
 
 # PATHに追加（まだ追加していない場合）
 # システム環境変数に追加する場合は管理者権限で実行
@@ -763,6 +766,72 @@ func main() {
     }
 }
 ```
+
+## コマンド詳細
+
+### git create-repository
+
+GitHubリポジトリの作成からクローン、VSCode起動までを自動化するコマンドです。
+
+**使い方:**
+```bash
+git create-repository <リポジトリ名>
+```
+
+**処理フロー:**
+1. GitHubにリモートリポジトリを作成（public/private選択可能、Description指定可能）
+2. 作成したリポジトリをクローン
+3. クローンしたディレクトリに移動
+4. VSCodeでプロジェクトを開く
+
+**使用例:**
+```bash
+git create-repository my-new-project
+```
+
+**実行の流れ:**
+1. コマンドを実行してリポジトリ名を指定
+2. 公開設定（public/private）を選択（デフォルト: private）
+3. 説明を入力（省略可）
+4. 確認メッセージで `y` を入力
+5. 自動的にリポジトリ作成→クローン→移動→VSCode起動を実行
+
+**使用する主なコマンド:**
+- `gh repo create`: GitHubリポジトリの作成
+- `git clone`: リポジトリのクローン
+- `code .`: VSCodeの起動
+
+**注意事項:**
+- GitHub CLI (`gh`) がインストールされている必要があります
+- `gh auth login` でログイン済みである必要があります
+- VSCode (`code` コマンド) がパスに含まれている必要があります
+
+**GitHub CLI のインストール:**
+
+Windows (winget):
+```powershell
+winget install --id GitHub.cli
+```
+
+macOS (Homebrew):
+```bash
+brew install gh
+```
+
+Linux (Debian/Ubuntu):
+```bash
+sudo apt install gh
+```
+
+**認証方法:**
+```bash
+gh auth login
+```
+
+対話的に以下を選択:
+1. GitHub.com を選択
+2. HTTPS を選択
+3. ブラウザで認証を選択
 
 ## 開発メモ
 
