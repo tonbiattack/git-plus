@@ -158,8 +158,7 @@ func createPR(base, head string) error {
 func mergePR() error {
 	cmd := exec.Command("gh", "pr", "merge",
 		"--merge",
-		"--delete-branch",
-		"--auto")
+		"--delete-branch")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
@@ -206,7 +205,7 @@ func printHelp() {
 説明:
   以下の処理を自動的に実行します:
   1. タイトル・本文なしでPRを作成（--fillオプション使用）
-  2. PRをマージしてブランチを削除（--merge --delete-branch --auto）
+  2. PRをマージしてブランチを削除（--merge --delete-branch）
   3. ベースブランチに切り替え（git switch）
   4. 最新の変更を取得（git pull）
 
