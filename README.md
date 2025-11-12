@@ -19,6 +19,7 @@ Git の日常操作を少しだけ楽にするためのカスタムコマンド�
 - `git resume`：git pause で保存した作業を復元します。元のブランチに戻り、スタッシュから変更を復元します。
 - `git create-repository`：GitHubリポジトリの作成からクローン、VSCode起動までを自動化します。public/private選択、説明の指定が可能です。
 - `git new-tag`：セマンティックバージョニングに従って新しいタグを自動生成します。feature/bug指定でminor/patchを自動判定します。
+- `git browse`：現在のリポジトリをブラウザで開きます。リポジトリの概要を素早く確認したい場合に便利です。
 
 どれも `git-xxx` という名前のバイナリを用意することで、`git xxx` として呼び出せる Git 拡張サブコマンドです。
 
@@ -61,6 +62,7 @@ go build -o ~/bin/git-pause ./cmd/git-pause
 go build -o ~/bin/git-resume ./cmd/git-resume
 go build -o ~/bin/git-create-repository ./cmd/git-create-repository
 go build -o ~/bin/git-new-tag ./cmd/git-new-tag
+go build -o ~/bin/git-browse ./cmd/git-browse
 
 # PATHに追加（まだ追加していない場合）
 echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
@@ -92,6 +94,7 @@ go build -o "$env:USERPROFILE\bin\git-pause.exe" .\cmd\git-pause
 go build -o "$env:USERPROFILE\bin\git-resume.exe" .\cmd\git-resume
 go build -o "$env:USERPROFILE\bin\git-create-repository.exe" .\cmd\git-create-repository
 go build -o "$env:USERPROFILE\bin\git-new-tag.exe" .\cmd\git-new-tag
+go build -o "$env:USERPROFILE\bin\git-browse.exe" .\cmd\git-browse
 
 # PATHに追加（まだ追加していない場合）
 # システム環境変数に追加する場合は管理者権限で実行
