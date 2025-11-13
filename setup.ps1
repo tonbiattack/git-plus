@@ -28,7 +28,9 @@ $commands = @(
     "git-resume",
     "git-create-repository",
     "git-new-tag",
-    "git-browse"
+    "git-browse",
+    "git-pr-checkout",
+    "git-clone-org"
 )
 
 Write-Host ""

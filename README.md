@@ -20,6 +20,8 @@ Git の日常操作を少しだけ楽にするためのカスタムコマンド�
 - `git create-repository`：GitHubリポジトリの作成からクローン、VSCode起動までを自動化します。public/private選択、説明の指定が可能です。
 - `git new-tag`：セマンティックバージョニングに従って新しいタグを自動生成します。feature/bug指定でminor/patchを自動判定します。
 - `git browse`：現在のリポジトリをブラウザで開きます。リポジトリの概要を素早く確認したい場合に便利です。
+- `git pr-checkout`：最新または指定されたプルリクエストをチェックアウトします。現在の作業を自動保存し、git resumeで復元できます。
+- `git clone-org`：GitHub組織のリポジトリを一括クローンします。最終更新日時でソートし、最新N個のみをクローン可能。既存リポジトリはスキップし、アーカイブやshallowクローンのオプションも利用可能です。
 
 どれも `git-xxx` という名前のバイナリを用意することで、`git xxx` として呼び出せる Git 拡張サブコマンドです。
 
@@ -51,7 +53,7 @@ cd git-plus
 ```
 
 セットアップスクリプトは以下を自動的に行います：
-- 全19コマンドのビルド
+- 全20コマンドのビルド
 - `~/bin`（Windows: `%USERPROFILE%\bin`）への配置
 - PATH環境変数への追加
 
@@ -82,6 +84,8 @@ go build -o ~/bin/git-resume ./cmd/git-resume
 go build -o ~/bin/git-create-repository ./cmd/git-create-repository
 go build -o ~/bin/git-new-tag ./cmd/git-new-tag
 go build -o ~/bin/git-browse ./cmd/git-browse
+go build -o ~/bin/git-pr-checkout ./cmd/git-pr-checkout
+go build -o ~/bin/git-clone-org ./cmd/git-clone-org
 
 # PATHに追加（まだ追加していない場合）
 echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
@@ -114,6 +118,8 @@ go build -o "$env:USERPROFILE\bin\git-resume.exe" .\cmd\git-resume
 go build -o "$env:USERPROFILE\bin\git-create-repository.exe" .\cmd\git-create-repository
 go build -o "$env:USERPROFILE\bin\git-new-tag.exe" .\cmd\git-new-tag
 go build -o "$env:USERPROFILE\bin\git-browse.exe" .\cmd\git-browse
+go build -o "$env:USERPROFILE\bin\git-pr-checkout.exe" .\cmd\git-pr-checkout
+go build -o "$env:USERPROFILE\bin\git-clone-org.exe" .\cmd\git-clone-org
 
 # PATHに追加（まだ追加していない場合）
 # システム環境変数に追加する場合は管理者権限で実行
@@ -161,6 +167,7 @@ go install github.com/tonbiattack/git-plus/cmd/git-pr-merge@latest
 go install github.com/tonbiattack/git-plus/cmd/git-pause@latest
 go install github.com/tonbiattack/git-plus/cmd/git-resume@latest
 go install github.com/tonbiattack/git-plus/cmd/git-new-tag@latest
+go install github.com/tonbiattack/git-plus/cmd/git-pr-checkout@latest
 ```
 
 `@latest` で解決できない場合（モジュールプロキシの都合など）には、`@main` を指定するとリポジトリの最新コミットを直接取得できます。
@@ -189,6 +196,8 @@ go build -o ./bin/git-pr-merge ./cmd/git-pr-merge
 go build -o ./bin/git-pause ./cmd/git-pause
 go build -o ./bin/git-resume ./cmd/git-resume
 go build -o ./bin/git-new-tag ./cmd/git-new-tag
+go build -o ./bin/git-pr-checkout ./cmd/git-pr-checkout
+go build -o ./bin/git-clone-org ./cmd/git-clone-org
 
 # 相対パスで実行
 ./bin/git-newbranch feature/awesome
@@ -214,6 +223,8 @@ go run ./cmd/git-pr-merge
 go run ./cmd/git-pause main
 go run ./cmd/git-resume
 go run ./cmd/git-new-tag feature
+go run ./cmd/git-pr-checkout
+go run ./cmd/git-pr-checkout 123
 ```
 
 Windows で PowerShell を利用している場合は、`./bin/git-newbranch` の代わりに `.\bin\git-newbranch.exe` のようにパスを指定してください。
@@ -243,6 +254,8 @@ rm ~/bin/git-pr-merge
 rm ~/bin/git-pause
 rm ~/bin/git-resume
 rm ~/bin/git-new-tag
+rm ~/bin/git-pr-checkout
+rm ~/bin/git-clone-org
 
 # リポジトリも削除する場合
 rm -rf ~/path/to/git-plus
@@ -268,6 +281,8 @@ Remove-Item "$env:USERPROFILE\bin\git-pr-merge.exe"
 Remove-Item "$env:USERPROFILE\bin\git-pause.exe"
 Remove-Item "$env:USERPROFILE\bin\git-resume.exe"
 Remove-Item "$env:USERPROFILE\bin\git-new-tag.exe"
+Remove-Item "$env:USERPROFILE\bin\git-pr-checkout.exe"
+Remove-Item "$env:USERPROFILE\bin\git-clone-org.exe"
 
 # リポジトリも削除する場合
 Remove-Item -Recurse -Force "C:\path\to\git-plus"
@@ -296,6 +311,8 @@ rm $(go env GOPATH)/bin/git-pr-merge
 rm $(go env GOPATH)/bin/git-pause
 rm $(go env GOPATH)/bin/git-resume
 rm $(go env GOPATH)/bin/git-new-tag
+rm $(go env GOPATH)/bin/git-pr-checkout
+rm $(go env GOPATH)/bin/git-clone-org
 ```
 
 **Windows (PowerShell):**
@@ -317,6 +334,8 @@ Remove-Item "$env:GOPATH\bin\git-pr-merge.exe"
 Remove-Item "$env:GOPATH\bin\git-pause.exe"
 Remove-Item "$env:GOPATH\bin\git-resume.exe"
 Remove-Item "$env:GOPATH\bin\git-new-tag.exe"
+Remove-Item "$env:GOPATH\bin\git-pr-checkout.exe"
+Remove-Item "$env:GOPATH\bin\git-clone-org.exe"
 ```
 
 ### go install で更新されない場合の対処法
@@ -755,6 +774,61 @@ git new-tag
 - セマンティックバージョニング（v1.2.3形式）に従ったタグが必要です
 - リモートへのプッシュは `--push` オプションを指定した場合のみ実行されます
 
+### git pr-checkout
+
+```bash
+git pr-checkout              # 最新のPRをチェックアウト
+git pr-checkout 123          # PR #123 をチェックアウト
+git pr-checkout -h           # ヘルプを表示
+```
+
+最新または指定されたプルリクエストをチェックアウトします。現在の作業を自動的に保存（git pause と同様）するため、後で git resume で戻ることができます。
+
+**主な機能:**
+- **最新PR自動取得**: 引数なしで実行すると、最新のオープンなPRを自動的にチェックアウトします。
+- **指定PR取得**: PR番号を指定すると、そのPRをチェックアウトします。
+- **作業の自動保存**: 現在の変更を自動的にスタッシュし、git pause と同じ仕組みで状態を保存します。
+- **簡単に元に戻せる**: git resume で元のブランチと作業内容を復元できます。
+
+**使用例:**
+
+```bash
+# 最新のPRをチェックアウト
+git pr-checkout
+# 最新のPRを取得中...
+# 最新のPR #123 をチェックアウトします
+# 変更を保存中...
+# ✓ 変更を保存しました: abc123...
+# PR #123 をチェックアウト中...
+# ✓ PR #123 のブランチ 'feature/awesome' にチェックアウトしました
+#
+# 元のブランチに戻るには: git resume
+
+# 特定のPRをチェックアウト
+git pr-checkout 456
+
+# PRの確認・テストが完了したら元のブランチに戻る
+git resume
+```
+
+**動作:**
+1. GitHub CLIを使用してPR情報を取得（引数なしの場合は最新のPRを取得）
+2. 現在のブランチと変更を確認
+3. 変更があればスタッシュに保存
+4. 状態を保存（`~/.git-plus/pause-state.json`）
+5. `gh pr checkout` でPRブランチをチェックアウト
+6. git resume で元のブランチと変更を復元可能に
+
+**前提条件:**
+- GitHub CLI (gh) がインストールされていること
+- `gh auth login`でログイン済みであること
+- GitHubリポジトリのPRにアクセスできること
+
+**注意事項:**
+- 既に pause 状態の場合は上書き確認が表示されます
+- チェックアウト後は `git resume` で元のブランチに戻ることができます
+- PRブランチで作業した内容は通常通りコミット・プッシュできます
+
 ### git pr-merge
 
 ```bash
@@ -947,6 +1021,153 @@ gh auth login
 1. GitHub.com を選択
 2. HTTPS を選択
 3. ブラウザで認証を選択
+
+### git clone-org
+
+GitHub組織のリポジトリを一括クローンするコマンドです。
+
+**使い方:**
+```bash
+git clone-org <organization> [オプション]
+```
+
+**引数:**
+- `organization`: GitHub組織名
+
+**オプション:**
+- `--limit N, -n N`: 最新N個のリポジトリのみをクローン（デフォルト: すべて）
+- `--archived`: アーカイブされたリポジトリも含める（デフォルト: 除外）
+- `--shallow`: shallow クローンを使用（`--depth=1`）
+- `-h, --help`: ヘルプを表示
+
+**処理フロー:**
+1. GitHub CLI を使用してリポジトリ一覧を取得
+2. 最終更新日時でソート（最新順）
+3. 組織名のディレクトリを作成
+4. 各リポジトリを順次クローン
+   - 既存のリポジトリはスキップ
+   - アーカイブされたリポジトリは `--archived` オプションがない限りスキップ
+   - `--limit N` が指定されている場合は上位N個のみをクローン
+5. 結果を表示
+
+**使用例:**
+```bash
+# myorg 組織の全リポジトリをクローン
+git clone-org myorg
+
+# 最新5個のリポジトリのみをクローン
+git clone-org myorg --limit 5
+
+# 最新10個のリポジトリのみをクローン（省略形）
+git clone-org myorg -n 10
+
+# アーカイブも含める
+git clone-org myorg --archived
+
+# shallow クローンを使用
+git clone-org myorg --shallow
+
+# 最新3個をshallowクローン
+git clone-org myorg --limit 3 --shallow
+```
+
+**実行の流れ (--limit 指定時):**
+```
+組織名: myorg
+オプション: 最新 5 個のリポジトリのみをクローン
+オプション: shallow クローン (--depth=1)
+
+[1/3] リポジトリ一覧を取得しています...
+✓ 15個のリポジトリを取得しました
+
+注意: 3個のアーカイブされたリポジトリをスキップします。
+アーカイブされたリポジトリも含める場合は --archived オプションを使用してください。
+
+最新 5 個のリポジトリに制限します。
+
+5個のリポジトリをクローンしますか？
+続行しますか？ (Y/n): y
+
+[2/3] クローン先ディレクトリを作成しています...
+✓ ディレクトリを作成しました: ./myorg
+
+[3/3] リポジトリをクローンしています...
+
+[1/5] repo-latest
+  📥 クローン中...
+  ✅ 完了
+
+[2/5] repo-recent
+  ⏩ スキップ: すでに存在します
+
+...
+
+✓ すべての処理が完了しました！
+📊 結果: 4個クローン, 1個スキップ
+```
+
+**実行の流れ (全リポジトリクローン時、50個以上の場合):**
+```
+組織名: myorg
+
+[1/3] リポジトリ一覧を取得しています...
+✓ 75個のリポジトリを取得しました
+
+⚠️  警告: 75個のリポジトリをクローンします。
+   多数のリポジトリをクローンする場合は時間がかかります。
+   最新のリポジトリのみが必要な場合は --limit オプションを検討してください。
+   例: git clone-org myorg --limit 10
+
+75個のリポジトリをクローンしますか？
+続行しますか？ (Y/n): y
+
+[2/3] クローン先ディレクトリを作成しています...
+✓ ディレクトリを作成しました: ./myorg
+
+[3/3] リポジトリをクローンしています...
+...
+```
+
+**主な機能:**
+- **最終更新日時でソート**: リポジトリを最終更新日時（pushedAt）でソートし、最新順にクローン
+- **件数制限**: `--limit N` で最新N個のリポジトリのみをクローン可能
+- **スマートな警告**: 50個以上のリポジトリをクローンする場合、自動的に警告を表示し、`--limit` オプションの使用を提案
+- **重複チェック**: すでに同じフォルダに同じ名前のリポジトリがある場合は自動的にスキップ
+- **アーカイブフィルタリング**: デフォルトでアーカイブされたリポジトリを除外（`--archived` で含める）
+- **Shallow クローン**: `--shallow` オプションで高速なクローンが可能
+- **進捗表示**: クローン中のリポジトリと結果をリアルタイムで表示
+- **エラーハンドリング**: クローンに失敗した場合でも続行し、最後に結果を表示
+
+**注意事項:**
+- GitHub CLI (`gh`) がインストールされている必要があります
+- `gh auth login` でログイン済みである必要があります
+- HTTPS URLを使用するため、SSH認証の設定は不要です
+- リポジトリ数が多い場合は時間がかかることがあります
+- リポジトリは `./組織名/` ディレクトリ配下にクローンされます
+
+**GitHub CLI のインストール:**
+
+Windows (winget):
+```powershell
+winget install --id GitHub.cli
+```
+
+macOS (Homebrew):
+```bash
+brew install gh
+```
+
+Linux (Debian/Ubuntu):
+```bash
+sudo apt install gh
+```
+
+**認証方法:**
+```bash
+gh auth login
+```
+
+認証後、HTTPS経由でリポジトリをクローンします。SSH認証の設定は不要です。
 
 ## 開発メモ
 

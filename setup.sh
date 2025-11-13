@@ -32,6 +32,8 @@ commands=(
     "git-create-repository"
     "git-new-tag"
     "git-browse"
+    "git-pr-checkout"
+    "git-clone-org"
 )
 
 echo ""

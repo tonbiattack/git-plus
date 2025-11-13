@@ -158,9 +158,9 @@ func createStash(message string) (string, error) {
 	return strings.TrimSpace(string(output)), nil
 }
 
-// switchBranch は指定されたブランチに切り替え
+// switchBranch は指定されたブランチまたはタグに切り替え
 func switchBranch(branch string) error {
-	cmd := exec.Command("git", "switch", branch)
+	cmd := exec.Command("git", "checkout", branch)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
