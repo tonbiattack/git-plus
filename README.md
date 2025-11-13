@@ -36,7 +36,26 @@ git clone https://github.com/tonbiattack/git-plus.git
 cd git-plus
 ```
 
-**2. ビルドしてPATHの通った場所に配置**
+**2. セットアップスクリプトを実行（推奨）**
+
+**Linux / macOS の場合:**
+
+```bash
+./setup.sh
+```
+
+**Windows (PowerShell) の場合:**
+
+```powershell
+.\setup.ps1
+```
+
+セットアップスクリプトは以下を自動的に行います：
+- 全19コマンドのビルド
+- `~/bin`（Windows: `%USERPROFILE%\bin`）への配置
+- PATH環境変数への追加
+
+**手動でビルドする場合:**
 
 **Linux / macOS の場合:**
 
