@@ -1,4 +1,4 @@
-Git の日常操作を少しだけ楽にするためのカスタムコマンド集です。元々 Bash で書いていたスクリプトを Go で書き直し、単体のバイナリとして配布できるようにしました。
+Git の日常操作を少しだけ楽にするためのカスタムコマンド集です。元々 Bash で書いていたスクリプトを Go で書き直し、Cobra フレームワークを使用して単一のバイナリとして配布できるようにしました。
 
 ## コマンド一覧
 
@@ -23,7 +23,7 @@ Git の日常操作を少しだけ楽にするためのカスタムコマンド�
 - `git pr-checkout`：最新または指定されたプルリクエストをチェックアウトします。現在の作業を自動保存し、git resumeで復元できます。
 - `git clone-org`：GitHub組織のリポジトリを一括クローンします。最終更新日時でソートし、最新N個のみをクローン可能。既存リポジトリはスキップし、アーカイブやshallowクローンのオプションも利用可能です。
 
-どれも `git-xxx` という名前のバイナリを用意することで、`git xxx` として呼び出せる Git 拡張サブコマンドです。
+Cobra フレームワークで実装された単一のバイナリから、`git-xxx` 形式の名前でシンボリックリンク（Linux/macOS）またはコピー（Windows）が作成され、`git xxx` として呼び出せる Git 拡張サブコマンドとして機能します。
 
 ## インストール
 
@@ -53,9 +53,13 @@ cd git-plus
 ```
 
 セットアップスクリプトは以下を自動的に行います：
-- 全20コマンドのビルド
+- git-plus バイナリのビルド
 - `~/bin`（Windows: `%USERPROFILE%\bin`）への配置
+- 各コマンド用のシンボリックリンク作成（Linux/macOS）またはコピー作成（Windows）
+  - `git-newbranch`, `git-reset-tag`, `git-amend` など20個のコマンド
 - PATH環境変数への追加
+
+これにより、`git newbranch`、`git step` などの形式でコマンドを呼び出せます。
 
 **手動でビルドする場合:**
 
@@ -65,27 +69,31 @@ cd git-plus
 # ~/bin にビルド（~/bin が存在しない場合は作成）
 mkdir -p ~/bin
 
-# 全コマンドをビルド
-go build -o ~/bin/git-newbranch ./cmd/git-newbranch
-go build -o ~/bin/git-reset-tag ./cmd/git-reset-tag
-go build -o ~/bin/git-amend ./cmd/git-amend
-go build -o ~/bin/git-squash ./cmd/git-squash
-go build -o ~/bin/git-track ./cmd/git-track
-go build -o ~/bin/git-delete-local-branches ./cmd/git-delete-local-branches
-go build -o ~/bin/git-undo-last-commit ./cmd/git-undo-last-commit
-go build -o ~/bin/git-tag-diff ./cmd/git-tag-diff
-go build -o ~/bin/git-stash-cleanup ./cmd/git-stash-cleanup
-go build -o ~/bin/git-recent ./cmd/git-recent
-go build -o ~/bin/git-step ./cmd/git-step
-go build -o ~/bin/git-sync ./cmd/git-sync
-go build -o ~/bin/git-pr-merge ./cmd/git-pr-merge
-go build -o ~/bin/git-pause ./cmd/git-pause
-go build -o ~/bin/git-resume ./cmd/git-resume
-go build -o ~/bin/git-create-repository ./cmd/git-create-repository
-go build -o ~/bin/git-new-tag ./cmd/git-new-tag
-go build -o ~/bin/git-browse ./cmd/git-browse
-go build -o ~/bin/git-pr-checkout ./cmd/git-pr-checkout
-go build -o ~/bin/git-clone-org ./cmd/git-clone-org
+# git-plus をビルド
+go build -o ~/bin/git-plus .
+
+# 各コマンド用のシンボリックリンクを作成
+cd ~/bin
+ln -s git-plus git-newbranch
+ln -s git-plus git-reset-tag
+ln -s git-plus git-amend
+ln -s git-plus git-squash
+ln -s git-plus git-track
+ln -s git-plus git-delete-local-branches
+ln -s git-plus git-undo-last-commit
+ln -s git-plus git-tag-diff
+ln -s git-plus git-stash-cleanup
+ln -s git-plus git-recent
+ln -s git-plus git-step
+ln -s git-plus git-sync
+ln -s git-plus git-pr-merge
+ln -s git-plus git-pause
+ln -s git-plus git-resume
+ln -s git-plus git-create-repository
+ln -s git-plus git-new-tag
+ln -s git-plus git-browse
+ln -s git-plus git-pr-checkout
+ln -s git-plus git-clone-org
 
 # PATHに追加（まだ追加していない場合）
 echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
@@ -99,27 +107,31 @@ source ~/.bashrc
 # ユーザーディレクトリ配下に bin フォルダを作成
 New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\bin"
 
-# 全コマンドをビルド
-go build -o "$env:USERPROFILE\bin\git-newbranch.exe" .\cmd\git-newbranch
-go build -o "$env:USERPROFILE\bin\git-reset-tag.exe" .\cmd\git-reset-tag
-go build -o "$env:USERPROFILE\bin\git-amend.exe" .\cmd\git-amend
-go build -o "$env:USERPROFILE\bin\git-squash.exe" .\cmd\git-squash
-go build -o "$env:USERPROFILE\bin\git-track.exe" .\cmd\git-track
-go build -o "$env:USERPROFILE\bin\git-delete-local-branches.exe" .\cmd\git-delete-local-branches
-go build -o "$env:USERPROFILE\bin\git-undo-last-commit.exe" .\cmd\git-undo-last-commit
-go build -o "$env:USERPROFILE\bin\git-tag-diff.exe" .\cmd\git-tag-diff
-go build -o "$env:USERPROFILE\bin\git-stash-cleanup.exe" .\cmd\git-stash-cleanup
-go build -o "$env:USERPROFILE\bin\git-recent.exe" .\cmd\git-recent
-go build -o "$env:USERPROFILE\bin\git-step.exe" .\cmd\git-step
-go build -o "$env:USERPROFILE\bin\git-sync.exe" .\cmd\git-sync
-go build -o "$env:USERPROFILE\bin\git-pr-merge.exe" .\cmd\git-pr-merge
-go build -o "$env:USERPROFILE\bin\git-pause.exe" .\cmd\git-pause
-go build -o "$env:USERPROFILE\bin\git-resume.exe" .\cmd\git-resume
-go build -o "$env:USERPROFILE\bin\git-create-repository.exe" .\cmd\git-create-repository
-go build -o "$env:USERPROFILE\bin\git-new-tag.exe" .\cmd\git-new-tag
-go build -o "$env:USERPROFILE\bin\git-browse.exe" .\cmd\git-browse
-go build -o "$env:USERPROFILE\bin\git-pr-checkout.exe" .\cmd\git-pr-checkout
-go build -o "$env:USERPROFILE\bin\git-clone-org.exe" .\cmd\git-clone-org
+# git-plus をビルド
+go build -o "$env:USERPROFILE\bin\git-plus.exe" .
+
+# 各コマンド用のコピーを作成
+$binPath = "$env:USERPROFILE\bin"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-newbranch.exe"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-reset-tag.exe"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-amend.exe"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-squash.exe"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-track.exe"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-delete-local-branches.exe"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-undo-last-commit.exe"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-tag-diff.exe"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-stash-cleanup.exe"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-recent.exe"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-step.exe"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-sync.exe"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-pr-merge.exe"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-pause.exe"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-resume.exe"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-create-repository.exe"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-new-tag.exe"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-browse.exe"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-pr-checkout.exe"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-clone-org.exe"
 
 # PATHに追加（まだ追加していない場合）
 # システム環境変数に追加する場合は管理者権限で実行
@@ -136,6 +148,7 @@ $env:Path = [Environment]::GetEnvironmentVariable("Path", "User")
 ```bash
 git newbranch -h
 git step -h
+git recent -h
 ```
 
 **更新方法:**
@@ -146,116 +159,53 @@ git pull
 # 上記のビルドコマンドを再実行
 ```
 
-### 代替: go install を使用（ネットワーク環境による）
-
-Go 1.22 以降がインストールされていれば、以下のコマンドだけで導入できます。
-
-```bash
-go install github.com/tonbiattack/git-plus/cmd/git-newbranch@latest
-go install github.com/tonbiattack/git-plus/cmd/git-reset-tag@latest
-go install github.com/tonbiattack/git-plus/cmd/git-amend@latest
-go install github.com/tonbiattack/git-plus/cmd/git-squash@latest
-go install github.com/tonbiattack/git-plus/cmd/git-track@latest
-go install github.com/tonbiattack/git-plus/cmd/git-delete-local-branches@latest
-go install github.com/tonbiattack/git-plus/cmd/git-undo-last-commit@latest
-go install github.com/tonbiattack/git-plus/cmd/git-tag-diff@latest
-go install github.com/tonbiattack/git-plus/cmd/git-stash-cleanup@latest
-go install github.com/tonbiattack/git-plus/cmd/git-recent@latest
-go install github.com/tonbiattack/git-plus/cmd/git-step@latest
-go install github.com/tonbiattack/git-plus/cmd/git-sync@latest
-go install github.com/tonbiattack/git-plus/cmd/git-pr-merge@latest
-go install github.com/tonbiattack/git-plus/cmd/git-pause@latest
-go install github.com/tonbiattack/git-plus/cmd/git-resume@latest
-go install github.com/tonbiattack/git-plus/cmd/git-new-tag@latest
-go install github.com/tonbiattack/git-plus/cmd/git-pr-checkout@latest
-```
-
-`@latest` で解決できない場合（モジュールプロキシの都合など）には、`@main` を指定するとリポジトリの最新コミットを直接取得できます。
-
-`GOBIN`（または `GOPATH/bin`）が PATH に含まれていない場合は、環境に合わせて追加してください。
-
 ### ローカルで開発・テストする方法
 
 リポジトリをクローンしている場合は、グローバルにインストールせずにローカルでそのまま実行できます。
 
 ```bash
 # プロジェクトディレクトリ内でビルド
-go build -o ./bin/git-newbranch ./cmd/git-newbranch
-go build -o ./bin/git-reset-tag ./cmd/git-reset-tag
-go build -o ./bin/git-amend ./cmd/git-amend
-go build -o ./bin/git-squash ./cmd/git-squash
-go build -o ./bin/git-track ./cmd/git-track
-go build -o ./bin/git-delete-local-branches ./cmd/git-delete-local-branches
-go build -o ./bin/git-undo-last-commit ./cmd/git-undo-last-commit
-go build -o ./bin/git-tag-diff ./cmd/git-tag-diff
-go build -o ./bin/git-stash-cleanup ./cmd/git-stash-cleanup
-go build -o ./bin/git-recent ./cmd/git-recent
-go build -o ./bin/git-step ./cmd/git-step
-go build -o ./bin/git-sync ./cmd/git-sync
-go build -o ./bin/git-pr-merge ./cmd/git-pr-merge
-go build -o ./bin/git-pause ./cmd/git-pause
-go build -o ./bin/git-resume ./cmd/git-resume
-go build -o ./bin/git-new-tag ./cmd/git-new-tag
-go build -o ./bin/git-pr-checkout ./cmd/git-pr-checkout
-go build -o ./bin/git-clone-org ./cmd/git-clone-org
+go build -o ./bin/git-plus .
 
 # 相対パスで実行
-./bin/git-newbranch feature/awesome
-./bin/git-reset-tag v1.2.3
+./bin/git-plus newbranch feature/awesome
+./bin/git-plus reset-tag v1.2.3
 ```
 
 開発中に動作を素早く試したい場合は `go run` も利用できます。
 
 ```bash
-go run ./cmd/git-newbranch feature/awesome
-go run ./cmd/git-reset-tag v1.2.3
-go run ./cmd/git-amend --no-edit
-go run ./cmd/git-squash 3
-go run ./cmd/git-track
-go run ./cmd/git-delete-local-branches
-go run ./cmd/git-undo-last-commit
-go run ./cmd/git-tag-diff V4.2.00.00 V4.3.00.00
-go run ./cmd/git-stash-cleanup
-go run ./cmd/git-recent
-go run ./cmd/git-step
-go run ./cmd/git-sync
-go run ./cmd/git-pr-merge
-go run ./cmd/git-pause main
-go run ./cmd/git-resume
-go run ./cmd/git-new-tag feature
-go run ./cmd/git-pr-checkout
-go run ./cmd/git-pr-checkout 123
+go run . newbranch feature/awesome
+go run . reset-tag v1.2.3
+go run . amend --no-edit
+go run . squash 3
+go run . track
+go run . delete-local-branches
+go run . undo-last-commit
+go run . tag-diff V4.2.00.00 V4.3.00.00
+go run . stash-cleanup
+go run . recent
+go run . step
+go run . sync
+go run . pr-merge
+go run . pause main
+go run . resume
+go run . new-tag feature
+go run . pr-checkout
+go run . pr-checkout 123
 ```
 
-Windows で PowerShell を利用している場合は、`./bin/git-newbranch` の代わりに `.\bin\git-newbranch.exe` のようにパスを指定してください。
+Windows で PowerShell を利用している場合は、`./bin/git-plus` の代わりに `.\bin\git-plus.exe` のようにパスを指定してください。
 
 
 ## アンインストール
 
-### クローン版のアンインストール
-
 **Linux / macOS:**
 
 ```bash
-# バイナリを削除
-rm ~/bin/git-newbranch
-rm ~/bin/git-reset-tag
-rm ~/bin/git-amend
-rm ~/bin/git-squash
-rm ~/bin/git-track
-rm ~/bin/git-delete-local-branches
-rm ~/bin/git-undo-last-commit
-rm ~/bin/git-tag-diff
-rm ~/bin/git-stash-cleanup
-rm ~/bin/git-recent
-rm ~/bin/git-step
-rm ~/bin/git-sync
-rm ~/bin/git-pr-merge
-rm ~/bin/git-pause
-rm ~/bin/git-resume
-rm ~/bin/git-new-tag
-rm ~/bin/git-pr-checkout
-rm ~/bin/git-clone-org
+# バイナリとシンボリックリンクを削除
+rm ~/bin/git-plus
+rm ~/bin/git-*
 
 # リポジトリも削除する場合
 rm -rf ~/path/to/git-plus
@@ -264,117 +214,13 @@ rm -rf ~/path/to/git-plus
 **Windows (PowerShell):**
 
 ```powershell
-# バイナリを削除
-Remove-Item "$env:USERPROFILE\bin\git-newbranch.exe"
-Remove-Item "$env:USERPROFILE\bin\git-reset-tag.exe"
-Remove-Item "$env:USERPROFILE\bin\git-amend.exe"
-Remove-Item "$env:USERPROFILE\bin\git-squash.exe"
-Remove-Item "$env:USERPROFILE\bin\git-track.exe"
-Remove-Item "$env:USERPROFILE\bin\git-delete-local-branches.exe"
-Remove-Item "$env:USERPROFILE\bin\git-undo-last-commit.exe"
-Remove-Item "$env:USERPROFILE\bin\git-tag-diff.exe"
-Remove-Item "$env:USERPROFILE\bin\git-stash-cleanup.exe"
-Remove-Item "$env:USERPROFILE\bin\git-recent.exe"
-Remove-Item "$env:USERPROFILE\bin\git-step.exe"
-Remove-Item "$env:USERPROFILE\bin\git-sync.exe"
-Remove-Item "$env:USERPROFILE\bin\git-pr-merge.exe"
-Remove-Item "$env:USERPROFILE\bin\git-pause.exe"
-Remove-Item "$env:USERPROFILE\bin\git-resume.exe"
-Remove-Item "$env:USERPROFILE\bin\git-new-tag.exe"
-Remove-Item "$env:USERPROFILE\bin\git-pr-checkout.exe"
-Remove-Item "$env:USERPROFILE\bin\git-clone-org.exe"
+# バイナリとコピーを削除
+Remove-Item "$env:USERPROFILE\bin\git-plus.exe"
+Remove-Item "$env:USERPROFILE\bin\git-*.exe"
 
 # リポジトリも削除する場合
 Remove-Item -Recurse -Force "C:\path\to\git-plus"
 ```
-
-### go install 版のアンインストール
-
-`go install` で配置したバイナリは、既定では `go env GOBIN`（未設定時は `$(go env GOPATH)/bin`）に保存されます。
-
-**Linux / macOS:**
-
-```bash
-rm $(go env GOPATH)/bin/git-newbranch
-rm $(go env GOPATH)/bin/git-reset-tag
-rm $(go env GOPATH)/bin/git-amend
-rm $(go env GOPATH)/bin/git-squash
-rm $(go env GOPATH)/bin/git-track
-rm $(go env GOPATH)/bin/git-delete-local-branches
-rm $(go env GOPATH)/bin/git-undo-last-commit
-rm $(go env GOPATH)/bin/git-tag-diff
-rm $(go env GOPATH)/bin/git-stash-cleanup
-rm $(go env GOPATH)/bin/git-recent
-rm $(go env GOPATH)/bin/git-step
-rm $(go env GOPATH)/bin/git-sync
-rm $(go env GOPATH)/bin/git-pr-merge
-rm $(go env GOPATH)/bin/git-pause
-rm $(go env GOPATH)/bin/git-resume
-rm $(go env GOPATH)/bin/git-new-tag
-rm $(go env GOPATH)/bin/git-pr-checkout
-rm $(go env GOPATH)/bin/git-clone-org
-```
-
-**Windows (PowerShell):**
-
-```powershell
-Remove-Item "$env:GOPATH\bin\git-newbranch.exe"
-Remove-Item "$env:GOPATH\bin\git-reset-tag.exe"
-Remove-Item "$env:GOPATH\bin\git-amend.exe"
-Remove-Item "$env:GOPATH\bin\git-squash.exe"
-Remove-Item "$env:GOPATH\bin\git-track.exe"
-Remove-Item "$env:GOPATH\bin\git-delete-local-branches.exe"
-Remove-Item "$env:GOPATH\bin\git-undo-last-commit.exe"
-Remove-Item "$env:GOPATH\bin\git-tag-diff.exe"
-Remove-Item "$env:GOPATH\bin\git-stash-cleanup.exe"
-Remove-Item "$env:GOPATH\bin\git-recent.exe"
-Remove-Item "$env:GOPATH\bin\git-step.exe"
-Remove-Item "$env:GOPATH\bin\git-sync.exe"
-Remove-Item "$env:GOPATH\bin\git-pr-merge.exe"
-Remove-Item "$env:GOPATH\bin\git-pause.exe"
-Remove-Item "$env:GOPATH\bin\git-resume.exe"
-Remove-Item "$env:GOPATH\bin\git-new-tag.exe"
-Remove-Item "$env:GOPATH\bin\git-pr-checkout.exe"
-Remove-Item "$env:GOPATH\bin\git-clone-org.exe"
-```
-
-### go install で更新されない場合の対処法
-
-`go install` を再実行しても最新版に更新されない場合は、Go のモジュールキャッシュが原因の可能性があります。以下の方法で解決できます。
-
-#### 1. 対象パッケージのキャッシュのみ削除（推奨）
-
-**Linux / macOS:**
-
-```bash
-rm -rf $(go env GOMODCACHE)/github.com/tonbiattack/git-plus*
-```
-
-**Windows (PowerShell):**
-
-```powershell
-Remove-Item -Recurse -Force "$env:GOMODCACHE\github.com\tonbiattack\git-plus*"
-```
-
-削除後、再度 `go install` を実行してください。
-
-#### 2. すべてのモジュールキャッシュを削除（影響範囲が大きい）
-
-```bash
-go clean -modcache
-```
-
-このコマンドは `$GOMODCACHE`（通常は `$GOPATH/pkg/mod`）配下のすべてのキャッシュを削除します。他のパッケージにも影響するため、必要な場合のみ実行してください。
-
-### まとめ
-
-| 目的 | コマンド例 |
-|-----|----------|
-| バイナリのみ削除（通常のアンインストール） | `rm $(go env GOPATH)/bin/git-*` |
-| 対象パッケージのキャッシュ削除（更新されない時） | `rm -rf $(go env GOMODCACHE)/github.com/tonbiattack/git-plus*` |
-| すべてのキャッシュ削除 | `go clean -modcache` |
-
-💡 **補足**: `go install` にはアンインストールコマンドは存在しません。バイナリを直接削除するだけでアンインストールできます。
 
 ## 使い方
 
@@ -892,13 +738,17 @@ git pr-merge
 
 ```
 .
-├── cmd/               # 各コマンドのエントリーポイント
-│   ├── git-amend/
-│   ├── git-newbranch/
-│   ├── git-sync/
-│   └── ...
+├── cmd/               # Cobraコマンド定義
+│   ├── root.go       # ルートコマンド
+│   ├── amend.go      # amendサブコマンド
+│   ├── newbranch.go  # newbranchサブコマンド
+│   ├── sync.go       # syncサブコマンド
+│   └── ...           # その他20のサブコマンド
 ├── internal/          # 内部共通パッケージ
-│   └── gitcmd/       # Gitコマンド実行の共通ユーティリティ
+│   ├── gitcmd/       # Gitコマンド実行の共通ユーティリティ
+│   ├── ui/           # UI関連のユーティリティ
+│   └── pausestate/   # pause/resume状態管理
+├── main.go           # エントリーポイント
 ├── bin/              # ビルド済みバイナリ
 └── go.mod
 ```
@@ -1172,7 +1022,9 @@ gh auth login
 ## 開発メモ
 
 - Go 1.22 以降でのビルドを想定しています。
-- ルートに `go.mod` を置き、各コマンドは `cmd/<name>/main.go` に配置しています。
+- Cobra フレームワークを使用した単一バイナリ構造です。
+- ルートに `go.mod` を置き、各サブコマンドは `cmd/<name>.go` に配置しています。
 - 共通処理は `internal/` パッケージに配置しています。
-- 追加のコマンドを作成する場合は `cmd` 配下にディレクトリを増やし、`go build ./cmd/<name>` でビルドしてください。
+- 実行ファイル名が `git-xxx` の場合、自動的に `xxx` サブコマンドとして実行されます。
+- 追加のコマンドを作成する場合は `cmd` 配下に新しい `.go` ファイルを作成し、`rootCmd` に登録してください。
  

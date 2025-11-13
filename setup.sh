@@ -1,6 +1,6 @@
 #!/bin/bash
 # Git Plus セットアップスクリプト (Linux/macOS)
-# 全てのgit-plusコマンドをビルドしてPATHに追加します
+# git-plusコマンドをビルドしてPATHに追加します
 
 set -e
 
@@ -12,7 +12,22 @@ BIN_PATH="$HOME/bin"
 echo "binディレクトリを作成中: $BIN_PATH"
 mkdir -p "$BIN_PATH"
 
-# 全コマンドのリスト
+echo ""
+echo "git-plusコマンドをビルド中..."
+echo ""
+
+printf "  ビルド中: git-plus... "
+
+if go build -o "$BIN_PATH/git-plus" . 2>/dev/null; then
+    echo "✓ OK"
+else
+    echo "✗ FAILED"
+    echo ""
+    echo "エラー: ビルドに失敗しました"
+    exit 1
+fi
+
+# 各コマンド用のシンボリックリンクを作成
 commands=(
     "git-newbranch"
     "git-reset-tag"
@@ -37,30 +52,26 @@ commands=(
 )
 
 echo ""
-echo "全 ${#commands[@]} コマンドをビルド中..."
+echo "シンボリックリンクを作成中..."
 echo ""
 
 success_count=0
-fail_count=0
-
 for cmd in "${commands[@]}"; do
-    printf "  ビルド中: %-30s " "$cmd..."
+    printf "  作成中: %-30s " "$cmd..."
 
-    if go build -o "$BIN_PATH/$cmd" "./cmd/$cmd" 2>/dev/null; then
+    # 既存のシンボリックリンクやファイルを削除
+    rm -f "$BIN_PATH/$cmd"
+
+    if ln -s "$BIN_PATH/git-plus" "$BIN_PATH/$cmd" 2>/dev/null; then
         echo "✓ OK"
         ((success_count++))
     else
         echo "✗ FAILED"
-        ((fail_count++))
     fi
 done
 
 echo ""
-if [ $fail_count -eq 0 ]; then
-    echo -e "\033[32mビルド完了: $success_count 成功, $fail_count 失敗\033[0m"
-else
-    echo -e "\033[33mビルド完了: $success_count 成功, $fail_count 失敗\033[0m"
-fi
+echo -e "\033[32mシンボリックリンク作成完了: $success_count 個\033[0m"
 
 # PATHに追加
 echo ""
@@ -101,10 +112,7 @@ echo "  git newbranch feature-xxx"
 echo "  git new-tag feature"
 echo "  git browse"
 echo ""
-echo -e "\033[36m全コマンド一覧:\033[0m"
-echo "  git help          # 通常のgitヘルプ"
-for cmd in "${commands[@]}"; do
-    cmd_name="${cmd/git-/git }"
-    echo "  $cmd_name -h"
-done
+echo -e "\033[36mヘルプを表示:\033[0m"
+echo "  git newbranch -h"
+echo "  git step -h"
 echo ""
