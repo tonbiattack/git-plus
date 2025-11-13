@@ -17,6 +17,7 @@ Git の日常操作を少しだけ楽にするためのカスタムコマンド�
 - `git step`：リポジトリ全体のステップ数とユーザーごとの貢献度を11の指標で集計します。追加比、削除比、更新比、コード割合など多角的な分析が可能です。
 - `git sync`：現在のブランチを最新のリモートブランチ（main/master）と同期します。rebaseを使用して履歴をきれいに保ちます。
 - `git pr-merge`：PRの作成からマージ、ブランチ削除、最新の変更取得までを一気に実行します。GitHub CLIを使用した自動化コマンドです。
+- `git merge-pr`：プルリクエストをマージします。`gh pr merge` のラッパーで、マージ方法の選択やブランチ削除を対話的に実行できます。
 - `git pause`：現在の作業を一時保存してブランチを切り替えます。変更をスタッシュして、別のブランチでの作業を開始できます。
 - `git resume`：git pause で保存した作業を復元します。元のブランチに戻り、スタッシュから変更を復元します。
 - `git create-repository`：GitHubリポジトリの作成からクローン、VSCode起動までを自動化します。public/private選択、説明の指定が可能です。
@@ -58,7 +59,7 @@ cd git-plus
 - git-plus バイナリのビルド
 - `~/bin`（Windows: `%USERPROFILE%\bin`）への配置
 - 各コマンド用のシンボリックリンク作成（Linux/macOS）またはコピー作成（Windows）
-  - `git-newbranch`, `git-reset-tag`, `git-amend` など20個のコマンド
+  - `git-newbranch`, `git-reset-tag`, `git-amend` など21個のコマンド
 - PATH環境変数への追加
 
 これにより、`git newbranch`、`git step` などの形式でコマンドを呼び出せます。
@@ -91,6 +92,7 @@ ln -s git-plus git-recent
 ln -s git-plus git-step
 ln -s git-plus git-sync
 ln -s git-plus git-pr-merge
+ln -s git-plus git-merge-pr
 ln -s git-plus git-pause
 ln -s git-plus git-resume
 ln -s git-plus git-create-repository
@@ -131,6 +133,7 @@ Copy-Item "$binPath\git-plus.exe" "$binPath\git-recent.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-step.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-sync.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-pr-merge.exe"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-merge-pr.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-pause.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-resume.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-create-repository.exe"
@@ -838,6 +841,73 @@ git pr-merge
 - `--fill`オプションを使用するため、PRのタイトルと本文は最新のコミットメッセージから自動生成されます
 - `--auto`オプションを使用するため、ステータスチェックが通過すると自動的にマージされます
 - マージ後、リモートのブランチは自動的に削除されます
+
+### git merge-pr
+
+```bash
+git merge-pr [PR番号] [オプション]
+git merge-pr -h              # ヘルプを表示
+```
+
+プルリクエストをマージします。GitHub CLI の `gh pr merge` をラップして、Git コマンドとして実行できるようにします。
+
+**主な機能:**
+- **対話的なマージ**: 引数なしで実行すると、マージ方法やブランチ削除を対話的に選択できます
+- **マージ方法の選択**: merge commit、squash、rebase から選択可能
+- **ブランチ削除**: マージ後にリモートブランチを削除可能
+- **すべてのオプションをサポート**: gh pr merge のすべてのオプションがそのまま使用できます
+
+**使用例:**
+
+```bash
+# 対話的にマージ（カレントブランチのPRをマージ）
+git merge-pr
+# ? What merge method would you like to use? Create a merge commit
+# ? Delete the branch locally and on GitHub? Yes
+# ? What's next? Submit
+
+# PR番号を指定してマージ
+git merge-pr 89
+
+# スカッシュマージ
+git merge-pr --squash
+
+# マージ後にブランチを削除
+git merge-pr --delete-branch
+
+# 複数のオプションを組み合わせ
+git merge-pr 89 --squash --delete-branch --auto
+
+# 自動マージ（ステータスチェック通過後に自動マージ）
+git merge-pr --auto
+```
+
+**サポートされるオプション:**
+- `--merge`: マージコミットを作成（デフォルト）
+- `--squash`: スカッシュマージ
+- `--rebase`: リベースマージ
+- `--delete-branch`: マージ後にブランチを削除
+- `--auto`: ステータスチェック通過後に自動マージ
+- `--body <text>`: マージコミットのボディ
+- `--subject <text>`: マージコミットのサブジェクト
+
+その他のオプションについては `gh pr merge --help` を参照してください。
+
+**git pr-merge との違い:**
+
+| コマンド | 用途 |
+|---------|------|
+| `git pr-merge` | PR作成→マージ→ブランチ切り替え→pull の一連の流れを自動化 |
+| `git merge-pr` | 既存のPRをマージ（`gh pr merge` のラッパー） |
+
+**前提条件:**
+- GitHub CLI (gh) がインストールされていること
+- `gh auth login`でログイン済みであること
+- マージ権限があること
+
+**注意事項:**
+- 引数なしで実行すると、カレントブランチに関連するPRをマージします
+- 対話的に実行する場合、マージ方法やブランチ削除を選択できます
 
 ## プロジェクト構成
 
