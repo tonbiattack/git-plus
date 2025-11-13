@@ -1,3 +1,29 @@
+// ================================================================================
+// pause.go
+// ================================================================================
+// このファイルは git-plus の pause コマンドを実装しています。
+//
+// 【概要】
+// pause コマンドは、現在のブランチでの作業を一時停止し、別のブランチに切り替える
+// 機能を提供します。未コミットの変更は自動的に stash に保存され、後で resume コマンドで
+// 復元できます。
+//
+// 【主な機能】
+// - 現在の作業内容（未コミット変更）を stash に保存
+// - 現在のブランチ情報と移動先ブランチ情報を状態ファイルに保存
+// - 指定されたブランチへの自動切り替え
+// - 既存の pause 状態の検出と上書き確認
+//
+// 【使用例】
+//   git-plus pause main              # main ブランチに一時切り替え
+//   git-plus pause feature/login     # feature/login ブランチに一時切り替え
+//
+// 【内部仕様】
+// - 状態は $HOME/.config/git-plus/pause-state.json に保存されます
+// - stash メッセージには "git-pause: from <ブランチ名>" の形式が使用されます
+// - 変更がない場合は stash をスキップします
+// ================================================================================
+
 package cmd
 
 import (
@@ -11,6 +37,9 @@ import (
 	"github.com/tonbiattack/git-plus/internal/ui"
 )
 
+// pauseCmd は pause コマンドの定義です。
+// 作業中の変更を stash に保存し、別のブランチへ移動します。
+// 後で resume コマンドで元のブランチと変更を復元できます。
 var pauseCmd = &cobra.Command{
 	Use:   "pause <branch>",
 	Short: "作業中の変更を stash して別ブランチへ移動します",
@@ -95,6 +124,14 @@ var pauseCmd = &cobra.Command{
 	},
 }
 
+// getBranchCurrent は現在チェックアウトされているブランチ名を取得します。
+//
+// 戻り値:
+//   - string: 現在のブランチ名（空白や改行は除去されます）
+//   - error: git コマンドの実行に失敗した場合のエラー情報
+//
+// 内部処理:
+//   git branch --show-current コマンドを実行してブランチ名を取得します。
 func getBranchCurrent() (string, error) {
 	cmd := exec.Command("git", "branch", "--show-current")
 	output, err := cmd.Output()
@@ -104,6 +141,15 @@ func getBranchCurrent() (string, error) {
 	return strings.TrimSpace(string(output)), nil
 }
 
+// checkUncommittedChanges は未コミットの変更があるかどうかを確認します。
+//
+// 戻り値:
+//   - bool: 未コミットの変更がある場合は true、ない場合は false
+//   - error: git コマンドの実行に失敗した場合のエラー情報
+//
+// 内部処理:
+//   git status --porcelain コマンドを実行し、出力があるかどうかで判定します。
+//   変更がない場合は空の出力が返されます。
 func checkUncommittedChanges() (bool, error) {
 	cmd := exec.Command("git", "status", "--porcelain")
 	output, err := cmd.Output()
@@ -113,6 +159,18 @@ func checkUncommittedChanges() (bool, error) {
 	return len(strings.TrimSpace(string(output))) > 0, nil
 }
 
+// createStashWithMessage は指定されたメッセージで stash を作成します。
+//
+// パラメータ:
+//   - message: stash に付けるメッセージ
+//
+// 戻り値:
+//   - string: 作成された stash の参照（SHA-1 ハッシュ）
+//   - error: stash の作成に失敗した場合のエラー情報
+//
+// 内部処理:
+//   1. git stash push -m "<メッセージ>" で変更を stash に保存
+//   2. git rev-parse stash@{0} で最新の stash の参照を取得
 func createStashWithMessage(message string) (string, error) {
 	cmd := exec.Command("git", "stash", "push", "-m", message)
 	if err := cmd.Run(); err != nil {
@@ -128,11 +186,23 @@ func createStashWithMessage(message string) (string, error) {
 	return strings.TrimSpace(string(output)), nil
 }
 
+// checkoutBranch は指定されたブランチにチェックアウトします。
+//
+// パラメータ:
+//   - branch: チェックアウトするブランチ名
+//
+// 戻り値:
+//   - error: チェックアウトに失敗した場合のエラー情報
+//
+// 内部処理:
+//   git checkout <ブランチ名> コマンドを実行します。
 func checkoutBranch(branch string) error {
 	cmd := exec.Command("git", "checkout", branch)
 	return cmd.Run()
 }
 
+// init は pause コマンドを root コマンドに登録します。
+// この関数はパッケージの初期化時に自動的に呼び出されます。
 func init() {
 	rootCmd.AddCommand(pauseCmd)
 }

@@ -1,3 +1,27 @@
+// ================================================================================
+// resume.go
+// ================================================================================
+// このファイルは git-plus の resume コマンドを実装しています。
+//
+// 【概要】
+// resume コマンドは、pause コマンドで一時停止した作業を再開する機能を提供します。
+// 保存されていたブランチに戻り、stash に保存されていた変更を復元します。
+//
+// 【主な機能】
+// - pause コマンドで保存された状態ファイルの読み込み
+// - 元のブランチへの自動切り替え
+// - stash に保存された変更の自動復元
+// - 復元後の状態ファイルの自動削除
+//
+// 【使用例】
+//   git-plus resume  # pause で保存した状態を復元
+//
+// 【内部仕様】
+// - 状態ファイルは $HOME/.config/git-plus/pause-state.json から読み込まれます
+// - stash が存在する場合は git stash pop で復元されます
+// - 復元が成功すると状態ファイルは自動的に削除されます
+// ================================================================================
+
 package cmd
 
 import (
@@ -9,6 +33,8 @@ import (
 	"github.com/tonbiattack/git-plus/internal/pausestate"
 )
 
+// resumeCmd は resume コマンドの定義です。
+// git pause で保存した作業を再開し、元のブランチと変更を復元します。
 var resumeCmd = &cobra.Command{
 	Use:   "resume",
 	Short: "git pause で保存した作業を再開します",
@@ -80,6 +106,14 @@ var resumeCmd = &cobra.Command{
 	},
 }
 
+// getCurrentBranchName は現在チェックアウトされているブランチ名を取得します。
+//
+// 戻り値:
+//   - string: 現在のブランチ名（空白や改行は除去されます）
+//   - error: git コマンドの実行に失敗した場合のエラー情報
+//
+// 内部処理:
+//   git branch --show-current コマンドを実行してブランチ名を取得します。
 func getCurrentBranchName() (string, error) {
 	cmd := exec.Command("git", "branch", "--show-current")
 	output, err := cmd.Output()
@@ -89,11 +123,37 @@ func getCurrentBranchName() (string, error) {
 	return strings.TrimSpace(string(output)), nil
 }
 
+// switchBranchTo は指定されたブランチに切り替えます。
+//
+// パラメータ:
+//   - branch: 切り替え先のブランチ名
+//
+// 戻り値:
+//   - error: ブランチの切り替えに失敗した場合のエラー情報
+//
+// 内部処理:
+//   git switch <ブランチ名> コマンドを実行します。
 func switchBranchTo(branch string) error {
 	cmd := exec.Command("git", "switch", branch)
 	return cmd.Run()
 }
 
+// popStashRef は指定された stash 参照を復元します。
+//
+// パラメータ:
+//   - stashRef: 復元する stash の参照（SHA-1 ハッシュ）
+//              注: 現在の実装では参照は使用されず、最新の stash を pop します
+//
+// 戻り値:
+//   - error: stash の復元に失敗した場合のエラー情報
+//
+// 内部処理:
+//   1. git stash list でスタッシュの存在を確認
+//   2. git stash pop で最新のスタッシュを復元
+//
+// 備考:
+//   現在の実装では stashRef パラメータは使用されず、常に最新の stash を復元します。
+//   将来的には特定の stash を復元できるように改善される可能性があります。
 func popStashRef(stashRef string) error {
 	// stash@{0} の形式でスタッシュを検索
 	cmd := exec.Command("git", "stash", "list")
@@ -116,6 +176,8 @@ func popStashRef(stashRef string) error {
 	return nil
 }
 
+// init は resume コマンドを root コマンドに登録します。
+// この関数はパッケージの初期化時に自動的に呼び出されます。
 func init() {
 	rootCmd.AddCommand(resumeCmd)
 }

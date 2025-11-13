@@ -10,7 +10,9 @@ Git の日常操作を少しだけ楽にするためのカスタムコマンド�
 - `git delete-local-branches`：`main` / `master` / `develop` 以外のマージ済みローカルブランチをまとめて削除します。
 - `git undo-last-commit`：直近のコミットを取り消し、変更内容をステージング状態のまま残します。
 - `git tag-diff`：2つのタグ間の差分を取得し、課題IDを抽出してファイルに出力します。リリースノート作成に便利です。
+- `git tag-checkout`：最新のタグを取得してチェックアウトします。セマンティックバージョン順で並べられたタグから選択できます。
 - `git stash-cleanup`：重複するスタッシュを検出して自動的に削除します。各重複グループの最新のものだけを残します。
+- `git stash-select`：スタッシュをインタラクティブに選択して操作できます。ファイル一覧を確認しながらapply/pop/drop/showなどの操作を実行できます。
 - `git recent`：最近使用したブランチを時系列で表示し、番号で選択して簡単に切り替えられます。
 - `git step`：リポジトリ全体のステップ数とユーザーごとの貢献度を11の指標で集計します。追加比、削除比、更新比、コード割合など多角的な分析が可能です。
 - `git sync`：現在のブランチを最新のリモートブランチ（main/master）と同期します。rebaseを使用して履歴をきれいに保ちます。
@@ -82,7 +84,9 @@ ln -s git-plus git-track
 ln -s git-plus git-delete-local-branches
 ln -s git-plus git-undo-last-commit
 ln -s git-plus git-tag-diff
+ln -s git-plus git-tag-checkout
 ln -s git-plus git-stash-cleanup
+ln -s git-plus git-stash-select
 ln -s git-plus git-recent
 ln -s git-plus git-step
 ln -s git-plus git-sync
@@ -120,7 +124,9 @@ Copy-Item "$binPath\git-plus.exe" "$binPath\git-track.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-delete-local-branches.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-undo-last-commit.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-tag-diff.exe"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-tag-checkout.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-stash-cleanup.exe"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-stash-select.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-recent.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-step.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-sync.exe"
@@ -184,6 +190,7 @@ go run . delete-local-branches
 go run . undo-last-commit
 go run . tag-diff V4.2.00.00 V4.3.00.00
 go run . stash-cleanup
+go run . stash-select
 go run . recent
 go run . step
 go run . sync
@@ -331,6 +338,37 @@ git tag-diff -h                    # ヘルプを表示
 
 指定したタグが存在しない場合や、タグ間に差分がない場合は適切なメッセージを表示します。
 
+### git tag-checkout
+
+```bash
+git tag-checkout                    # 最新10個のタグから選択
+git tag-checkout -n 5               # 最新5個のタグから選択
+git tag-checkout -y                 # 最新タグに自動チェックアウト
+git tag-checkout --limit 20         # 最新20個のタグから選択
+git tag-checkout --latest           # 最新タグを表示するのみ
+git tag-checkout -h                 # ヘルプを表示
+```
+
+1. セマンティックバージョン順（`--sort=-v:refname`）で最新のタグを取得します。
+2. デフォルトで最新10個のタグを表示します（`-n` または `--limit` オプションで変更可能）。
+3. 対話的にタグを選択してチェックアウトできます。
+4. `-y` オプションを使用すると、確認なしで最新タグにチェックアウトします。
+5. `--latest` オプションを使用すると、最新タグを表示するのみで終了します。
+
+**オプション:**
+- `-n, --limit <数>`: 表示するタグの数（デフォルト: 10）
+- `-y, --yes`: 確認なしで最新タグにチェックアウト
+- `--latest`: 最新タグのみを表示して終了
+- `-h`: ヘルプを表示
+
+**主な機能:**
+- **セマンティックバージョン順ソート**: `git tag --sort=-v:refname` を使用して、セマンティックバージョンに従って新しいもの → 古いものの順に並べます。
+- **対話的な選択**: タグ一覧から番号を選択してチェックアウトできます。
+- **高速チェックアウト**: `-y` オプションで最新タグに即座にチェックアウトできます。
+- **最新タグの確認**: `--latest` オプションで最新タグを確認するのみの用途にも使えます。
+
+引数は不要です。リリースタグやバージョンタグが多数存在する場合に、最新のタグに素早く切り替えたいときに便利です。
+
 ### git stash-cleanup
 
 ```bash
@@ -345,6 +383,75 @@ git stash-cleanup -h             # ヘルプを表示
 5. 削除結果と残りのスタッシュ数を表示します。
 
 引数は不要です。このコマンドは全スタッシュを自動的にスキャンして重複を検出します。誤って同じ変更を複数回スタッシュした場合や、スタッシュが溜まりすぎた場合の整理に便利です。
+
+### git stash-select
+
+```bash
+git stash-select
+git stash-select -h              # ヘルプを表示
+```
+
+スタッシュされている変更をインタラクティブに選択して操作できます。各スタッシュのファイル一覧を確認しながら、apply（適用）、pop（適用して削除）、drop（削除）、show（差分表示）などの操作を実行できます。
+
+**実行の流れ:**
+
+1. 全スタッシュの一覧を表示（番号、ブランチ、メッセージ、ファイル数）
+2. 番号を入力してスタッシュを選択
+3. 選択したスタッシュの詳細情報とファイル一覧を表示
+4. 操作を選択：
+   - `[a]pply`: スタッシュを適用（スタッシュは残す）
+   - `[p]op`: スタッシュを適用して削除
+   - `[d]rop`: スタッシュを削除
+   - `[s]how`: 差分を表示
+   - `[c]ancel`: キャンセル
+
+**使用例:**
+
+```bash
+git stash-select
+
+# 実行結果例:
+# スタッシュ一覧 (2 個):
+#
+# 1. stash@{0}
+#    ブランチ: feature/login
+#    メッセージ: WIP on feature/login: Add login form
+#    ファイル数: 3
+#
+# 2. stash@{1}
+#    ブランチ: main
+#    メッセージ: WIP on main: Update README
+#    ファイル数: 1
+#
+# 選択してください (番号を入力、Enterでキャンセル): 1
+#
+# 選択されたスタッシュ: stash@{0}
+# メッセージ: WIP on feature/login: Add login form
+# ブランチ: feature/login
+#
+# 変更されたファイル:
+#   - src/components/LoginForm.tsx
+#   - src/api/auth.ts
+#   - src/types/user.ts
+#
+# 操作を選択してください:
+#   [a]pply  - スタッシュを適用（スタッシュは残す）
+#   [p]op    - スタッシュを適用して削除
+#   [d]rop   - スタッシュを削除
+#   [s]how   - 差分を表示
+#   [c]ancel - キャンセル
+#
+# 選択 (a/p/d/s/c): a
+```
+
+**主な機能:**
+
+- **視覚的な一覧表示**: 各スタッシュのブランチ名、メッセージ、ファイル数を一目で確認できます。
+- **ファイル一覧の表示**: 選択したスタッシュに含まれるファイルを確認してから操作できます。
+- **安全な操作**: 各操作の意味を明示し、誤操作を防ぎます。
+- **柔軟な操作**: apply（残す）、pop（削除）、drop（削除のみ）、show（表示のみ）から選択できます。
+
+引数は不要です。`git stash list` で一覧を見て、`git stash show stash@{0}` で内容を確認して、`git stash apply stash@{0}` で適用する...という手順を1つのコマンドで完結できます。スタッシュが複数ある場合や、どのスタッシュを適用すべきか確認したい場合に便利です。
 
 ### git recent
 

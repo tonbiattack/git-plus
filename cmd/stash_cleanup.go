@@ -1,3 +1,30 @@
+// ================================================================================
+// stash_cleanup.go
+// ================================================================================
+// このファイルは git-plus の stash-cleanup コマンドを実装しています。
+//
+// 【概要】
+// stash-cleanup コマンドは、重複するスタッシュを検出して削除する機能を提供します。
+// ファイル構成と内容が完全に同一のスタッシュをグループ化し、古い重複を削除します。
+//
+// 【主な機能】
+// - 全スタッシュの詳細な分析
+// - ファイル構成と内容に基づく重複検出
+// - 重複スタッシュのグループ化と表示
+// - 各グループから最新のスタッシュ（インデックスが最小）のみを保持
+// - 古い重複スタッシュの自動削除
+// - 削除前の確認プロンプト
+//
+// 【使用例】
+//   git-plus stash-cleanup  # 重複スタッシュを検出して削除
+//
+// 【重複判定の仕組み】
+// 1. 各スタッシュのファイル一覧を取得
+// 2. 各ファイルの内容（worktree, index, untracked）を取得
+// 3. ファイル一覧と内容を結合してハッシュ値を計算
+// 4. 同じハッシュ値を持つスタッシュを重複と判定
+// ================================================================================
+
 package cmd
 
 import (
@@ -12,14 +39,16 @@ import (
 	"github.com/tonbiattack/git-plus/internal/ui"
 )
 
-// StashInfo はスタッシュの詳細情報を表す構造体
+// StashInfo はスタッシュの詳細情報を表す構造体です。
 type StashInfo struct {
-	Index int
-	Name  string
-	Files []string
-	Hash  string
+	Index int      // スタッシュのインデックス（stash@{N} の N）
+	Name  string   // スタッシュの名前（例: stash@{0}）
+	Files []string // スタッシュに含まれるファイルのパス一覧
+	Hash  string   // スタッシュの内容を表すハッシュ値（重複判定に使用）
 }
 
+// stashCleanupCmd は stash-cleanup コマンドの定義です。
+// 重複するスタッシュを検出して削除します。
 var stashCleanupCmd = &cobra.Command{
 	Use:   "stash-cleanup",
 	Short: "重複するスタッシュを検出して削除",
@@ -144,6 +173,15 @@ var stashCleanupCmd = &cobra.Command{
 	},
 }
 
+// getAllStashesList は全てのスタッシュの名前一覧を取得します。
+//
+// 戻り値:
+//   - []string: スタッシュ名のスライス（例: ["stash@{0}", "stash@{1}", ...]）
+//   - error: エラーが発生した場合のエラー情報
+//
+// 内部処理:
+//   git stash list コマンドを実行し、各行から stash@{N} の形式で
+//   スタッシュ名を抽出します。
 func getAllStashesList() ([]string, error) {
 	output, err := gitcmd.Run("stash", "list")
 	if err != nil {
@@ -166,6 +204,18 @@ func getAllStashesList() ([]string, error) {
 	return stashes, nil
 }
 
+// getStashFilesList は指定されたスタッシュに含まれるファイル一覧を取得します。
+//
+// パラメータ:
+//   - stash: スタッシュ名（例: stash@{0}）
+//
+// 戻り値:
+//   - []string: ファイルパスのスライス（重複を除去し、ソート済み）
+//   - error: エラーが発生した場合のエラー情報
+//
+// 内部処理:
+//   git stash show --name-only -u <stash> コマンドでファイル一覧を取得します。
+//   -u オプションにより untracked ファイルも含めます。
 func getStashFilesList(stash string) ([]string, error) {
 	output, err := gitcmd.Run("stash", "show", "--name-only", "-u", stash)
 	if err != nil {
@@ -191,6 +241,28 @@ func getStashFilesList(stash string) ([]string, error) {
 	return files, nil
 }
 
+// getStashHash はスタッシュの内容を表すハッシュ値を計算します。
+//
+// パラメータ:
+//   - stash: スタッシュ名（例: stash@{0}）
+//   - files: スタッシュに含まれるファイルのパス一覧
+//
+// 戻り値:
+//   - string: 計算されたハッシュ値（SHA-1）
+//   - error: エラーが発生した場合のエラー情報
+//
+// 内部処理:
+//   1. ファイル一覧を文字列として連結
+//   2. 各ファイルについて以下の3つの状態の内容を取得:
+//      - WORKTREE: 作業ディレクトリの状態（stash）
+//      - INDEX: ステージングエリアの状態（stash^2）
+//      - UNTRACKED: 追跡されていないファイル（stash^3）
+//   3. 全ての内容を連結してバッファを作成
+//   4. git hash-object --stdin でハッシュ値を計算
+//
+// 備考:
+//   この方法により、ファイル構成と内容が完全に同一のスタッシュは
+//   同じハッシュ値を持つため、重複判定が可能になります。
 func getStashHash(stash string, files []string) (string, error) {
 	var buffer bytes.Buffer
 
@@ -235,6 +307,20 @@ func getStashHash(stash string, files []string) (string, error) {
 	return strings.TrimSpace(string(output)), nil
 }
 
+// getStashFileContentByRef は指定された参照からファイルの内容を取得します。
+//
+// パラメータ:
+//   - stashRef: スタッシュの参照（例: stash@{0}, stash@{0}^2, stash@{0}^3）
+//   - file: ファイルパス
+//
+// 戻り値:
+//   - []byte: ファイルの内容
+//   - bool: ファイルが存在する場合は true、存在しない場合は false
+//   - error: エラーが発生した場合のエラー情報（存在しない場合は除く）
+//
+// 内部処理:
+//   git show <stashRef>:<file> コマンドでファイルの内容を取得します。
+//   終了コード 128 はファイルが存在しないことを示し、エラーとして扱いません。
 func getStashFileContentByRef(stashRef, file string) ([]byte, bool, error) {
 	if stashRef == "" {
 		return nil, false, nil
@@ -251,6 +337,19 @@ func getStashFileContentByRef(stashRef, file string) ([]byte, bool, error) {
 	return output, true, nil
 }
 
+// findDuplicateStashes は重複するスタッシュのグループを検出します。
+//
+// パラメータ:
+//   - stashInfos: 全スタッシュの詳細情報
+//
+// 戻り値:
+//   - [][]StashInfo: 重複スタッシュのグループのスライス
+//                    各グループはインデックスの昇順でソートされます
+//
+// 内部処理:
+//   1. ハッシュ値をキーとして、同じハッシュを持つスタッシュをグループ化
+//   2. 2つ以上のスタッシュを持つグループのみを抽出（重複グループ）
+//   3. 各グループをインデックスの昇順でソート
 func findDuplicateStashes(stashInfos []StashInfo) [][]StashInfo {
 	hashMap := make(map[string][]StashInfo)
 
@@ -271,10 +370,27 @@ func findDuplicateStashes(stashInfos []StashInfo) [][]StashInfo {
 	return duplicateGroups
 }
 
+// deleteStashByIndex は指定されたインデックスのスタッシュを削除します。
+//
+// パラメータ:
+//   - index: 削除するスタッシュのインデックス（stash@{N} の N）
+//
+// 戻り値:
+//   - error: 削除に失敗した場合のエラー情報
+//
+// 内部処理:
+//   git stash drop stash@{<index>} コマンドでスタッシュを削除します。
+//
+// 注意:
+//   スタッシュを削除すると、それより後のスタッシュのインデックスが
+//   繰り上がります。そのため、複数削除する場合は大きいインデックスから
+//   順に削除する必要があります。
 func deleteStashByIndex(index int) error {
 	return gitcmd.RunQuiet("stash", "drop", fmt.Sprintf("stash@{%d}", index))
 }
 
+// init は stash-cleanup コマンドを root コマンドに登録します。
+// この関数はパッケージの初期化時に自動的に呼び出されます。
 func init() {
 	rootCmd.AddCommand(stashCleanupCmd)
 }

@@ -1,3 +1,20 @@
+/*
+Package cmd は git-plus の各種コマンドを定義します。
+
+このファイル (track.go) は、トラッキングブランチを設定するコマンドを提供します。
+現在のブランチに対してリモートトラッキングブランチを設定し、
+必要に応じてリモートブランチを作成します。
+
+主な機能:
+  - トラッキングブランチの設定
+  - リモートブランチの自動作成
+  - git push --set-upstream の自動実行
+
+使用例:
+  git-plus track                    # origin/<現在のブランチ> をトラッキング
+  git-plus track upstream           # upstream/<現在のブランチ> をトラッキング
+  git-plus track origin feature-123 # origin/feature-123 をトラッキング
+*/
 package cmd
 
 import (
@@ -8,6 +25,8 @@ import (
 	"github.com/tonbiattack/git-plus/internal/gitcmd"
 )
 
+// trackCmd は現在のブランチにトラッキングブランチを設定するコマンドです。
+// リモートブランチが存在しない場合は、自動的に作成します。
 var trackCmd = &cobra.Command{
 	Use:   "track [リモート名] [ブランチ名]",
 	Short: "トラッキングブランチを設定",
@@ -45,6 +64,7 @@ git push --set-upstream を実行してリモートブランチを作成し、
 		}
 
 		if !exists {
+			// リモートブランチが存在しない場合は、プッシュして作成する
 			fmt.Printf("リモートブランチ %s が見つかりません。\n", remoteRef)
 			fmt.Printf("git push --set-upstream %s %s を実行します...\n\n", remote, remoteBranch)
 
@@ -56,7 +76,7 @@ git push --set-upstream を実行してリモートブランチを作成し、
 			return nil
 		}
 
-		// upstream を設定
+		// リモートブランチが存在する場合は、upstream を設定
 		upstreamRef := fmt.Sprintf("%s/%s", remote, remoteBranch)
 		if err := gitcmd.RunWithIO("branch", "--set-upstream-to="+upstreamRef, currentBranch); err != nil {
 			return fmt.Errorf("トラッキングブランチの設定に失敗しました: %w", err)
@@ -67,6 +87,11 @@ git push --set-upstream を実行してリモートブランチを作成し、
 	},
 }
 
+// fetchCurrentBranch は現在のブランチ名を取得します。
+//
+// 戻り値:
+//   - string: 現在のブランチ名
+//   - error: エラーが発生した場合はエラーオブジェクト
 func fetchCurrentBranch() (string, error) {
 	output, err := gitcmd.Run("rev-parse", "--abbrev-ref", "HEAD")
 	if err != nil {
@@ -75,9 +100,19 @@ func fetchCurrentBranch() (string, error) {
 	return strings.TrimSpace(string(output)), nil
 }
 
+// checkRemoteRefExists はリモート参照が存在するかを確認します。
+//
+// パラメータ:
+//   ref: 確認するリモート参照（例: "origin/main"）
+//
+// 戻り値:
+//   - bool: 存在する場合は true、存在しない場合は false
+//   - error: エラーが発生した場合はエラーオブジェクト
 func checkRemoteRefExists(ref string) (bool, error) {
+	// refs/remotes/<ref> の形式で存在確認
 	err := gitcmd.RunQuiet("show-ref", "--verify", "--quiet", fmt.Sprintf("refs/remotes/%s", ref))
 	if err != nil {
+		// 終了コード 1 は参照が見つからないことを示す
 		if gitcmd.IsExitError(err, 1) {
 			return false, nil
 		}
@@ -86,6 +121,8 @@ func checkRemoteRefExists(ref string) (bool, error) {
 	return true, nil
 }
 
+// init はコマンドの初期化を行います。
+// trackCmd を rootCmd に登録することで、CLI から実行可能にします。
 func init() {
 	rootCmd.AddCommand(trackCmd)
 }

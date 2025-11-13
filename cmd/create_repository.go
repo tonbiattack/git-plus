@@ -1,3 +1,18 @@
+/*
+Package cmd は git-plus の各種コマンドを定義します。
+
+このファイル (create_repository.go) は、GitHub リポジトリの作成から
+クローン、VSCode 起動までを一括で行うコマンドを提供します。
+
+主な機能:
+  - GitHub リポジトリの作成（public/private 選択可能）
+  - リポジトリの説明文の設定
+  - 作成したリポジトリのクローン
+  - VSCode の自動起動
+
+使用例:
+  git-plus create-repository my-new-project  # 対話的にリポジトリを作成
+*/
 package cmd
 
 import (
@@ -12,6 +27,8 @@ import (
 	"github.com/tonbiattack/git-plus/internal/ui"
 )
 
+// createRepositoryCmd は GitHub リポジトリの作成から VSCode 起動までを
+// 一括で実行するコマンドです。
 var createRepositoryCmd = &cobra.Command{
 	Use:   "create-repository <リポジトリ名>",
 	Short: "GitHubリポジトリの作成からクローン、VSCode起動まで",
@@ -26,7 +43,7 @@ var createRepositoryCmd = &cobra.Command{
 		repoName := args[0]
 		fmt.Printf("リポジトリ名: %s\n", repoName)
 
-		// 公開設定の確認
+		// 公開設定の確認（public/private）
 		visibility := promptForVisibility()
 		fmt.Printf("公開設定: %s\n", visibility)
 
@@ -36,7 +53,7 @@ var createRepositoryCmd = &cobra.Command{
 			fmt.Printf("説明: %s\n", description)
 		}
 
-		// 確認
+		// 確認プロンプト
 		if !ui.Confirm("\nGitHubにリポジトリを作成しますか？", true) {
 			fmt.Println("キャンセルしました。")
 			return nil
@@ -80,6 +97,10 @@ var createRepositoryCmd = &cobra.Command{
 	},
 }
 
+// promptForVisibility はユーザーにリポジトリの公開設定を尋ねます。
+//
+// 戻り値:
+//   - string: "public" または "private"
 func promptForVisibility() string {
 	fmt.Print("公開設定を選択してください [public/private] (デフォルト: private): ")
 	reader := bufio.NewReader(os.Stdin)
@@ -95,6 +116,10 @@ func promptForVisibility() string {
 	return "private"
 }
 
+// promptForDescription はユーザーにリポジトリの説明文を尋ねます。
+//
+// 戻り値:
+//   - string: 入力された説明文（空の場合もあり）
 func promptForDescription() string {
 	fmt.Print("リポジトリの説明を入力してください (省略可): ")
 	reader := bufio.NewReader(os.Stdin)
@@ -106,25 +131,39 @@ func promptForDescription() string {
 	return strings.TrimSpace(input)
 }
 
+// createGitHubRepository は GitHub CLI (gh) を使用してリポジトリを作成します。
+//
+// パラメータ:
+//   name: リポジトリ名
+//   visibility: "public" または "private"
+//   description: リポジトリの説明文
+//
+// 戻り値:
+//   - string: 作成されたリポジトリのURL
+//   - error: エラーが発生した場合はエラーオブジェクト
 func createGitHubRepository(name, visibility, description string) (string, error) {
 	args := []string{"repo", "create", name}
 
+	// 公開設定を追加
 	if visibility == "public" {
 		args = append(args, "--public")
 	} else {
 		args = append(args, "--private")
 	}
 
+	// 説明文が指定されている場合は追加
 	if description != "" {
 		args = append(args, "--description", description)
 	}
 
+	// gh repo create コマンドを実行
 	cmd := exec.Command("gh", args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("%v: %s", err, string(output))
 	}
 
+	// 出力からリポジトリ URL を抽出
 	repoURL := strings.TrimSpace(string(output))
 	lines := strings.Split(repoURL, "\n")
 	for _, line := range lines {
@@ -133,9 +172,17 @@ func createGitHubRepository(name, visibility, description string) (string, error
 		}
 	}
 
+	// URL が見つからない場合はデフォルトの URL を返す
 	return fmt.Sprintf("https://github.com/%s", name), nil
 }
 
+// cloneRepo は指定された URL のリポジトリをクローンします。
+//
+// パラメータ:
+//   repoURL: クローンするリポジトリの URL
+//
+// 戻り値:
+//   error: エラーが発生した場合はエラーオブジェクト
 func cloneRepo(repoURL string) error {
 	cmd := exec.Command("git", "clone", repoURL)
 	cmd.Stdout = os.Stdout
@@ -144,6 +191,10 @@ func cloneRepo(repoURL string) error {
 	return cmd.Run()
 }
 
+// launchVSCode は現在のディレクトリで VSCode を起動します。
+//
+// 戻り値:
+//   error: エラーが発生した場合はエラーオブジェクト
 func launchVSCode() error {
 	cmd := exec.Command("code", ".")
 	cmd.Stdout = os.Stdout
@@ -151,6 +202,8 @@ func launchVSCode() error {
 	return cmd.Run()
 }
 
+// init はコマンドの初期化を行います。
+// createRepositoryCmd を rootCmd に登録することで、CLI から実行可能にします。
 func init() {
 	rootCmd.AddCommand(createRepositoryCmd)
 }

@@ -1,3 +1,38 @@
+// ================================================================================
+// new_tag.go
+// ================================================================================
+// このファイルは git-plus の new-tag コマンドを実装しています。
+//
+// 【概要】
+// new-tag コマンドは、セマンティックバージョニング（SemVer）に従って
+// 新しいタグを作成する機能を提供します。現在のバージョンから自動的に
+// 次のバージョンを計算します。
+//
+// 【主な機能】
+// - セマンティックバージョニング（major.minor.patch）のサポート
+// - バージョンタイプの対話的選択（major/minor/patch）
+// - バージョンタイプの短縮形と別名のサポート
+//   - major/m/breaking: メジャーバージョンアップ（破壊的変更）
+//   - minor/n/feature/f: マイナーバージョンアップ（機能追加）
+//   - patch/p/bug/b/fix: パッチバージョンアップ（バグ修正）
+// - タグメッセージの指定（-m オプション）
+// - 作成後の自動プッシュ（--push オプション）
+// - ドライラン（--dry-run オプション）
+//
+// 【使用例】
+//   git-plus new-tag                      # 対話的にタイプを選択
+//   git-plus new-tag feature              # 機能追加（minor）
+//   git-plus new-tag bug                  # バグ修正（patch）
+//   git-plus new-tag major                # 破壊的変更
+//   git-plus new-tag feature --push       # 作成してプッシュ
+//   git-plus new-tag bug -m "Fix issue"   # メッセージ付きで作成
+//   git-plus new-tag minor --dry-run      # 確認のみ
+//
+// 【バージョン形式】
+// - 形式: v<major>.<minor>.<patch>
+// - 例: v1.2.3 → v1.3.0 (minor), v1.2.4 (patch), v2.0.0 (major)
+// ================================================================================
+
 package cmd
 
 import (
@@ -12,11 +47,13 @@ import (
 )
 
 var (
-	tagMessage string
-	tagPush    bool
-	tagDryRun  bool
+	tagMessage string // タグメッセージ（アノテーテッドタグ用）
+	tagPush    bool   // 作成後に自動的にリモートへプッシュするフラグ
+	tagDryRun  bool   // 実際には作成せず、次のバージョンだけを表示するフラグ
 )
 
+// newTagCmd は new-tag コマンドの定義です。
+// セマンティックバージョニングに従って新しいタグを作成します。
 var newTagCmd = &cobra.Command{
 	Use:   "new-tag [type]",
 	Short: "セマンティックバージョニングに従って新しいタグを作成",
@@ -111,6 +148,14 @@ var newTagCmd = &cobra.Command{
 	},
 }
 
+// getLatestTag は最新のタグを取得します。
+//
+// 戻り値:
+//   - string: 最新のタグ名（例: v1.2.3）
+//   - error: エラーが発生した場合のエラー情報
+//
+// 内部処理:
+//   git describe --tags --abbrev=0 コマンドで最新のタグを取得します。
 func getLatestTag() (string, error) {
 	cmd := exec.Command("git", "describe", "--tags", "--abbrev=0")
 	output, err := cmd.Output()
@@ -120,6 +165,20 @@ func getLatestTag() (string, error) {
 	return strings.TrimSpace(string(output)), nil
 }
 
+// extractVersion はタグからバージョン番号を抽出します。
+//
+// パラメータ:
+//   - tag: タグ名（例: v1.2.3 または 1.2.3）
+//
+// 戻り値:
+//   - major: メジャーバージョン
+//   - minor: マイナーバージョン
+//   - patch: パッチバージョン
+//   - err: 解析に失敗した場合のエラー情報
+//
+// 内部処理:
+//   正規表現を使用してバージョン番号を抽出します。
+//   v プレフィックスの有無に対応しています。
 func extractVersion(tag string) (major, minor, patch int, err error) {
 	re := regexp.MustCompile(`^v?(\d+)\.(\d+)\.(\d+)`)
 	matches := re.FindStringSubmatch(tag)
@@ -145,6 +204,19 @@ func extractVersion(tag string) (major, minor, patch int, err error) {
 	return major, minor, patch, nil
 }
 
+// normalizeVersionTypeName はバージョンタイプ名を正規化します。
+//
+// パラメータ:
+//   - input: ユーザーが入力したバージョンタイプ
+//
+// 戻り値:
+//   - string: 正規化されたバージョンタイプ（"major", "minor", "patch"）
+//            無効な入力の場合は空文字列
+//
+// サポートする入力:
+//   - major: major, m, breaking
+//   - minor: minor, n, feature, f
+//   - patch: patch, p, bug, b, fix
 func normalizeVersionTypeName(input string) string {
 	input = strings.ToLower(strings.TrimSpace(input))
 
@@ -160,6 +232,23 @@ func normalizeVersionTypeName(input string) string {
 	}
 }
 
+// computeNewVersion は新しいバージョン番号を計算します。
+//
+// パラメータ:
+//   - major: 現在のメジャーバージョン
+//   - minor: 現在のマイナーバージョン
+//   - patch: 現在のパッチバージョン
+//   - versionType: バージョンアップのタイプ（"major", "minor", "patch"）
+//
+// 戻り値:
+//   - newMajor: 新しいメジャーバージョン
+//   - newMinor: 新しいマイナーバージョン
+//   - newPatch: 新しいパッチバージョン
+//
+// ルール:
+//   - major: メジャーを+1、マイナーとパッチを0にリセット
+//   - minor: マイナーを+1、パッチを0にリセット
+//   - patch: パッチを+1
 func computeNewVersion(major, minor, patch int, versionType string) (newMajor, newMinor, newPatch int) {
 	switch versionType {
 	case "major":
@@ -173,6 +262,19 @@ func computeNewVersion(major, minor, patch int, versionType string) (newMajor, n
 	}
 }
 
+// interactiveVersionSelection は対話的にバージョンタイプを選択します。
+//
+// パラメータ:
+//   - major: 現在のメジャーバージョン
+//   - minor: 現在のマイナーバージョン
+//   - patch: 現在のパッチバージョン
+//
+// 戻り値:
+//   - string: 選択されたバージョンタイプ（"major", "minor", "patch"）
+//
+// 内部処理:
+//   各バージョンタイプの説明と新しいバージョンの例を表示し、
+//   ユーザーに選択を促します。無効な選択の場合は patch をデフォルトとします。
 func interactiveVersionSelection(major, minor, patch int) string {
 	fmt.Println("\n新しいタグのタイプを選択してください:")
 	fmt.Printf("  [1] major   - v%d.0.0 (破壊的変更)\n", major+1)
@@ -196,6 +298,19 @@ func interactiveVersionSelection(major, minor, patch int) string {
 	}
 }
 
+// makeTag は指定されたタグを作成します。
+//
+// パラメータ:
+//   - tag: 作成するタグ名（例: v1.2.3）
+//   - message: タグメッセージ（空文字列の場合は軽量タグを作成）
+//
+// 戻り値:
+//   - error: タグの作成に失敗した場合のエラー情報
+//
+// 内部処理:
+//   メッセージが指定されている場合は git tag -a <tag> -m <message> で
+//   アノテーテッドタグを作成し、そうでない場合は git tag <tag> で
+//   軽量タグを作成します。
 func makeTag(tag, message string) error {
 	var cmd *exec.Cmd
 	if message != "" {
@@ -206,11 +321,28 @@ func makeTag(tag, message string) error {
 	return cmd.Run()
 }
 
+// pushTagToRemote は指定されたタグをリモートリポジトリにプッシュします。
+//
+// パラメータ:
+//   - tag: プッシュするタグ名
+//
+// 戻り値:
+//   - error: プッシュに失敗した場合のエラー情報
+//
+// 内部処理:
+//   git push origin <tag> コマンドでリモートにタグをプッシュします。
 func pushTagToRemote(tag string) error {
 	cmd := exec.Command("git", "push", "origin", tag)
 	return cmd.Run()
 }
 
+// init は new-tag コマンドを root コマンドに登録し、フラグを設定します。
+// この関数はパッケージの初期化時に自動的に呼び出されます。
+//
+// 設定されるフラグ:
+//   -m, --message: タグメッセージを指定（アノテーテッドタグを作成）
+//   --push: 作成後に自動的にリモートへプッシュ
+//   --dry-run: 実際には作成せず、次のバージョンだけを表示
 func init() {
 	newTagCmd.Flags().StringVarP(&tagMessage, "message", "m", "", "タグメッセージを指定（アノテーテッドタグを作成）")
 	newTagCmd.Flags().BoolVar(&tagPush, "push", false, "作成後に自動的にリモートへプッシュ")

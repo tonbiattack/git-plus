@@ -1,3 +1,24 @@
+/*
+Package cmd は git-plus の各種コマンドを定義します。
+
+このファイル (clone_org.go) は、GitHub 組織のリポジトリを一括クローンするコマンドを提供します。
+GitHub CLI (gh) を使用して、指定された組織のすべてのリポジトリを取得し、
+最終更新日時順にクローンします。
+
+主な機能:
+  - GitHub 組織のリポジトリ一覧取得
+  - 最終更新日時（pushedAt）でのソート
+  - アーカイブされたリポジトリのフィルタリング
+  - shallow クローンのサポート
+  - クローン数の制限オプション
+  - すでに存在するリポジトリのスキップ
+
+使用例:
+  git-plus clone-org myorg                    # myorg 組織の全リポジトリをクローン
+  git-plus clone-org myorg --limit 5          # 最新5個のリポジトリのみをクローン
+  git-plus clone-org myorg --archived         # アーカイブも含める
+  git-plus clone-org myorg --shallow          # shallow クローンを使用
+*/
 package cmd
 
 import (
@@ -14,20 +35,26 @@ import (
 	"github.com/tonbiattack/git-plus/internal/ui"
 )
 
-// Repository は GitHub リポジトリの情報を表す構造体
+// Repository は GitHub リポジトリの情報を表す構造体です。
+// GitHub CLI (gh) の JSON 出力から取得したリポジトリ情報を保持します。
 type Repository struct {
-	Name       string    `json:"name"`
-	IsArchived bool      `json:"isArchived"`
-	Url        string    `json:"url"`
-	PushedAt   time.Time `json:"pushedAt"`
+	Name       string    `json:"name"`       // リポジトリ名
+	IsArchived bool      `json:"isArchived"` // アーカイブ済みフラグ
+	Url        string    `json:"url"`        // リポジトリURL
+	PushedAt   time.Time `json:"pushedAt"`   // 最終プッシュ日時
 }
 
 var (
+	// cloneOrgArchived はアーカイブされたリポジトリを含めるかどうかのフラグです。
 	cloneOrgArchived bool
-	cloneOrgShallow  bool
-	cloneOrgLimit    int
+	// cloneOrgShallow は shallow クローン（--depth=1）を使用するかどうかのフラグです。
+	cloneOrgShallow bool
+	// cloneOrgLimit はクローンするリポジトリの最大数を指定します（0の場合は無制限）。
+	cloneOrgLimit int
 )
 
+// cloneOrgCmd は GitHub 組織のリポジトリを一括クローンするコマンドです。
+// gh コマンドを使用してリポジトリ一覧を取得し、最新順にクローンします。
 var cloneOrgCmd = &cobra.Command{
 	Use:   "clone-org <organization>",
 	Short: "組織のリポジトリをクローン",
@@ -124,13 +151,23 @@ var cloneOrgCmd = &cobra.Command{
 	},
 }
 
+// getRepositories は指定された組織のリポジトリ一覧を GitHub CLI (gh) を使用して取得します。
+//
+// パラメータ:
+//   org: 組織名
+//
+// 戻り値:
+//   - []Repository: リポジトリ情報のスライス
+//   - error: エラーが発生した場合はエラーオブジェクト、成功時は nil
 func getRepositories(org string) ([]Repository, error) {
+	// gh repo list コマンドで組織のリポジトリ一覧を JSON 形式で取得
 	cmd := exec.Command("gh", "repo", "list", org, "--limit", "1000", "--json", "name,isArchived,url,pushedAt")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("%v: %s", err, string(output))
 	}
 
+	// JSON をパースして Repository 構造体のスライスに変換
 	var repos []Repository
 	if err := json.Unmarshal(output, &repos); err != nil {
 		return nil, fmt.Errorf("JSON解析エラー: %v", err)
@@ -139,17 +176,33 @@ func getRepositories(org string) ([]Repository, error) {
 	return repos, nil
 }
 
+// sortReposByPushedAt はリポジトリを最終プッシュ日時（PushedAt）でソートします。
+// 最新のリポジトリが先頭に来るように降順でソートします。
+//
+// パラメータ:
+//   repos: ソート対象のリポジトリスライス（この関数はスライスを直接変更します）
 func sortReposByPushedAt(repos []Repository) {
 	sort.Slice(repos, func(i, j int) bool {
+		// 最新のリポジトリを前に配置（降順）
 		return repos[i].PushedAt.After(repos[j].PushedAt)
 	})
 }
 
+// filterRepos はアーカイブ状態に基づいてリポジトリをフィルタリングします。
+//
+// パラメータ:
+//   repos: フィルタリング対象のリポジトリスライス
+//   includeArchived: アーカイブされたリポジトリを含める場合は true
+//
+// 戻り値:
+//   フィルタリング後のリポジトリスライス
 func filterRepos(repos []Repository, includeArchived bool) []Repository {
+	// アーカイブを含める場合は、そのまま全リポジトリを返す
 	if includeArchived {
 		return repos
 	}
 
+	// アーカイブされていないリポジトリのみを抽出
 	var filtered []Repository
 	for _, repo := range repos {
 		if !repo.IsArchived {
@@ -159,13 +212,25 @@ func filterRepos(repos []Repository, includeArchived bool) []Repository {
 	return filtered
 }
 
+// cloneRepos はリポジトリのスライスをクローンします。
+//
+// パラメータ:
+//   repos: クローン対象のリポジトリスライス
+//   baseDir: クローン先のベースディレクトリ
+//   shallow: shallow クローン（--depth=1）を使用する場合は true
+//
+// 戻り値:
+//   - int: 成功したクローン数
+//   - int: スキップしたリポジトリ数
 func cloneRepos(repos []Repository, baseDir string, shallow bool) (int, int) {
 	cloned := 0
 	skipped := 0
 
+	// 各リポジトリを順番にクローン
 	for i, repo := range repos {
 		fmt.Printf("\n[%d/%d] %s\n", i+1, len(repos), repo.Name)
 
+		// アーカイブ状態を表示するためのラベル
 		archiveStatus := ""
 		if repo.IsArchived {
 			archiveStatus = " (アーカイブ済み)"
@@ -174,6 +239,7 @@ func cloneRepos(repos []Repository, baseDir string, shallow bool) (int, int) {
 		repoPath := filepath.Join(baseDir, repo.Name)
 
 		// 既存のリポジトリをチェック
+		// 既に同じ名前のディレクトリが存在する場合はスキップ
 		if _, err := os.Stat(repoPath); err == nil {
 			fmt.Printf("  ⏩ スキップ: すでに存在します%s\n", archiveStatus)
 			skipped++
@@ -183,6 +249,7 @@ func cloneRepos(repos []Repository, baseDir string, shallow bool) (int, int) {
 		// クローン引数を構築
 		args := []string{"clone", repo.Url, repoPath}
 		if shallow {
+			// shallow クローンの場合は --depth 1 を追加
 			args = append(args, "--depth", "1")
 		}
 
@@ -190,8 +257,10 @@ func cloneRepos(repos []Repository, baseDir string, shallow bool) (int, int) {
 		fmt.Printf("  📥 クローン中...%s\n", archiveStatus)
 		cmd := exec.Command("git", args...)
 		if output, err := cmd.CombinedOutput(); err != nil {
+			// エラー発生時はエラーメッセージを表示してスキップ
 			fmt.Printf("  ❌ 失敗: %v\n", err)
 			errMsg := strings.TrimSpace(string(output))
+			// エラーメッセージが長すぎる場合は200文字で切り詰める
 			if len(errMsg) > 200 {
 				errMsg = errMsg[:200] + "..."
 			}
@@ -208,6 +277,8 @@ func cloneRepos(repos []Repository, baseDir string, shallow bool) (int, int) {
 	return cloned, skipped
 }
 
+// init はコマンドの初期化を行います。
+// フラグの定義と cloneOrgCmd を rootCmd に登録します。
 func init() {
 	cloneOrgCmd.Flags().BoolVar(&cloneOrgArchived, "archived", false, "アーカイブされたリポジトリも含める")
 	cloneOrgCmd.Flags().BoolVar(&cloneOrgShallow, "shallow", false, "shallow クローンを使用（--depth=1）")

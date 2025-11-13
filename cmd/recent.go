@@ -1,3 +1,27 @@
+// ================================================================================
+// recent.go
+// ================================================================================
+// このファイルは git-plus の recent コマンドを実装しています。
+//
+// 【概要】
+// recent コマンドは、最近使用したブランチを時系列順に表示し、
+// 番号を選択することで即座にブランチを切り替える機能を提供します。
+//
+// 【主な機能】
+// - 最近コミットがあったブランチを最大10件表示
+// - コミット日時順（最新順）での表示
+// - 現在のブランチは一覧から除外
+// - 番号入力による対話的なブランチ切り替え
+// - 相対的なコミット日時の表示（例: "2 hours ago"）
+//
+// 【使用例】
+//   git-plus recent  # 最近使用したブランチを表示して選択
+//
+// 【内部仕様】
+// - git for-each-ref --sort=-committerdate を使用してブランチを取得
+// - 表示件数は最大10件に制限
+// ================================================================================
+
 package cmd
 
 import (
@@ -11,12 +35,14 @@ import (
 	"github.com/tonbiattack/git-plus/internal/gitcmd"
 )
 
-// BranchInfo はブランチの情報を保持する構造体
+// BranchInfo はブランチの情報を保持する構造体です。
 type BranchInfo struct {
-	Name         string
-	LastCommitAt string
+	Name         string // ブランチ名
+	LastCommitAt string // 最後のコミット日時（相対表記、例: "2 hours ago"）
 }
 
+// recentCmd は recent コマンドの定義です。
+// 最近使用したブランチを表示して切り替えます。
 var recentCmd = &cobra.Command{
 	Use:   "recent",
 	Short: "最近使用したブランチを表示して切り替え",
@@ -111,6 +137,16 @@ var recentCmd = &cobra.Command{
 	},
 }
 
+// getRecentBranchesList は最近使用したブランチの一覧を取得します。
+//
+// 戻り値:
+//   - []BranchInfo: ブランチ情報のスライス（コミット日時の降順）
+//   - error: エラーが発生した場合のエラー情報
+//
+// 内部処理:
+//   git for-each-ref --sort=-committerdate コマンドで
+//   コミット日時順にソートされたブランチ一覧を取得します。
+//   出力形式: <ブランチ名>|<相対日時>
 func getRecentBranchesList() ([]BranchInfo, error) {
 	output, err := gitcmd.Run("for-each-ref",
 		"--sort=-committerdate",
@@ -143,6 +179,14 @@ func getRecentBranchesList() ([]BranchInfo, error) {
 	return branches, nil
 }
 
+// getCurrentBranchNow は現在チェックアウトされているブランチ名を取得します。
+//
+// 戻り値:
+//   - string: 現在のブランチ名（空白や改行は除去されます）
+//   - error: git コマンドの実行に失敗した場合のエラー情報
+//
+// 内部処理:
+//   git branch --show-current コマンドを実行してブランチ名を取得します。
 func getCurrentBranchNow() (string, error) {
 	output, err := gitcmd.Run("branch", "--show-current")
 	if err != nil {
@@ -151,10 +195,22 @@ func getCurrentBranchNow() (string, error) {
 	return strings.TrimSpace(string(output)), nil
 }
 
+// switchToSelectedBranch は指定されたブランチに切り替えます。
+//
+// パラメータ:
+//   - branch: 切り替え先のブランチ名
+//
+// 戻り値:
+//   - error: ブランチの切り替えに失敗した場合のエラー情報
+//
+// 内部処理:
+//   git switch <ブランチ名> コマンドを実行します。
 func switchToSelectedBranch(branch string) error {
 	return gitcmd.RunWithIO("switch", branch)
 }
 
+// init は recent コマンドを root コマンドに登録します。
+// この関数はパッケージの初期化時に自動的に呼び出されます。
 func init() {
 	rootCmd.AddCommand(recentCmd)
 }

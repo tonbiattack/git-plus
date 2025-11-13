@@ -1,3 +1,30 @@
+// ================================================================================
+// squash.go
+// ================================================================================
+// このファイルは git-plus の squash コマンドを実装しています。
+//
+// 【概要】
+// squash コマンドは、複数のコミットを1つにまとめる（スカッシュする）機能を提供します。
+// 対話的な UI により、簡単に複数のコミットを統合できます。
+//
+// 【主な機能】
+// - 直近の複数コミットを1つにまとめる
+// - 対話的なコミット数の選択（引数なしの場合）
+// - コミット数を引数で直接指定（例: git-plus squash 3）
+// - 統合前のコミットメッセージ一覧の表示
+// - 新しいコミットメッセージの入力
+// - 統合前の確認プロンプト
+//
+// 【使用例】
+//   git-plus squash           # 対話的に選択（最近10件を表示）
+//   git-plus squash 3         # 直近3つのコミットをスカッシュ
+//
+// 【内部仕様】
+// - git reset --soft HEAD~N でコミットを取り消し
+// - 取り消されたコミットの変更は全てステージングエリアに残る
+// - 新しいコミットメッセージで git commit を実行
+// ================================================================================
+
 package cmd
 
 import (
@@ -14,12 +41,14 @@ import (
 	"github.com/tonbiattack/git-plus/internal/ui"
 )
 
-// commit はコミット情報を表す構造体
+// commit はコミット情報を表す構造体です。
 type commit struct {
-	hash    string
-	subject string
+	hash    string // コミットのハッシュ値（SHA-1）
+	subject string // コミットの件名（1行目のメッセージ）
 }
 
+// squashCmd は squash コマンドの定義です。
+// 複数のコミットを1つにまとめます。
 var squashCmd = &cobra.Command{
 	Use:   "squash [コミット数]",
 	Short: "複数のコミットをスカッシュ",
@@ -80,6 +109,16 @@ var squashCmd = &cobra.Command{
 	},
 }
 
+// selectCommitsCount は対話的にスカッシュするコミット数を選択します。
+//
+// 戻り値:
+//   - int: ユーザーが選択したコミット数（0 の場合はキャンセル）
+//   - error: エラーが発生した場合のエラー情報
+//
+// 内部処理:
+//   1. 最近10件のコミットを取得して表示
+//   2. ユーザーにコミット数の入力を求める
+//   3. 0 または空入力の場合はキャンセル
 func selectCommitsCount() (int, error) {
 	commits, err := getRecentCommitsList(10)
 	if err != nil {
@@ -132,6 +171,18 @@ func selectCommitsCount() (int, error) {
 	return num, nil
 }
 
+// getRecentCommitsList は最近のコミット一覧を取得します。
+//
+// パラメータ:
+//   - count: 取得するコミット数
+//
+// 戻り値:
+//   - []commit: コミット情報のスライス（新しい順）
+//   - error: エラーが発生した場合のエラー情報
+//
+// 内部処理:
+//   git log --oneline -n <count> --format=%H %s コマンドで
+//   コミットハッシュと件名を取得します。
 func getRecentCommitsList(count int) ([]commit, error) {
 	output, err := gitcmd.Run("log", "--oneline", "-n", strconv.Itoa(count), "--format=%H %s")
 	if err != nil {
@@ -164,6 +215,23 @@ func getRecentCommitsList(count int) ([]commit, error) {
 	return commits, nil
 }
 
+// executeSquash は実際のスカッシュ処理を実行します。
+//
+// パラメータ:
+//   - numCommits: スカッシュするコミット数
+//   - commits: コミット情報のスライス
+//
+// 戻り値:
+//   - error: エラーが発生した場合のエラー情報
+//
+// 内部処理:
+//   1. git reset --soft HEAD~<numCommits> でコミットを取り消す
+//   2. 元のコミットメッセージを表示
+//   3. ユーザーに新しいコミットメッセージを入力してもらう
+//   4. 新しいコミットメッセージで git commit を実行
+//
+// 備考:
+//   git reset --soft を使用するため、変更はステージングエリアに保持されます。
 func executeSquash(numCommits int, commits []commit) error {
 	// git reset --soft を使用してコミットを取り消し
 	resetTarget := fmt.Sprintf("HEAD~%d", numCommits)
@@ -200,6 +268,8 @@ func executeSquash(numCommits int, commits []commit) error {
 	return nil
 }
 
+// init は squash コマンドを root コマンドに登録します。
+// この関数はパッケージの初期化時に自動的に呼び出されます。
 func init() {
 	rootCmd.AddCommand(squashCmd)
 }

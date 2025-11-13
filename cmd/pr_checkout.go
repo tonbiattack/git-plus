@@ -1,3 +1,32 @@
+// ================================================================================
+// pr_checkout.go
+// ================================================================================
+// このファイルは git-plus の pr-checkout コマンドを実装しています。
+//
+// 【概要】
+// pr-checkout コマンドは、最新または指定されたプルリクエストのブランチを
+// チェックアウトする機能を提供します。GitHub CLI (gh) を使用してPRと連携します。
+//
+// 【主な機能】
+// - 最新のオープンなPRの自動取得とチェックアウト
+// - PR番号を指定したチェックアウト
+// - 現在の作業内容の自動保存（pause コマンドと同様）
+// - resume コマンドでの復元に対応
+// - 既存の pause 状態の検出と上書き確認
+//
+// 【使用例】
+//   git-plus pr-checkout          # 最新のPRをチェックアウト
+//   git-plus pr-checkout 123      # PR #123 をチェックアウト
+//
+// 【内部仕様】
+// - GitHub CLI (gh) の gh pr checkout コマンドを使用
+// - 現在の状態は $HOME/.config/git-plus/pause-state.json に保存
+// - 未コミットの変更は stash に自動保存
+//
+// 【必要な外部ツール】
+// - GitHub CLI (gh): https://cli.github.com/
+// ================================================================================
+
 package cmd
 
 import (
@@ -12,6 +41,8 @@ import (
 	"github.com/tonbiattack/git-plus/internal/ui"
 )
 
+// prCheckoutCmd は pr-checkout コマンドの定義です。
+// 最新または指定されたプルリクエストをチェックアウトします。
 var prCheckoutCmd = &cobra.Command{
 	Use:   "pr-checkout [PR番号]",
 	Short: "最新または指定されたプルリクエストをチェックアウト",
@@ -130,12 +161,28 @@ PR番号を指定すると、その番号のPRをチェックアウトします�
 	},
 }
 
+// checkGitHubCLI は GitHub CLI (gh) がインストールされているかを確認します。
+//
+// 戻り値:
+//   - bool: gh コマンドが利用可能な場合は true、そうでない場合は false
+//
+// 内部処理:
+//   gh --version コマンドを実行し、成功するかどうかで判定します。
 func checkGitHubCLI() bool {
 	cmd := exec.Command("gh", "--version")
 	err := cmd.Run()
 	return err == nil
 }
 
+// fetchLatestPRNumber は最新のオープンなPR番号を取得します。
+//
+// 戻り値:
+//   - string: PR番号（数値の文字列表現、PRがない場合は空文字列）
+//   - error: エラーが発生した場合のエラー情報
+//
+// 内部処理:
+//   gh pr list --limit 1 --json number コマンドでJSON形式で最新のPR番号を取得し、
+//   パースして返します。
 func fetchLatestPRNumber() (string, error) {
 	cmd := exec.Command("gh", "pr", "list", "--limit", "1", "--json", "number")
 	output, err := cmd.Output()
@@ -158,6 +205,18 @@ func fetchLatestPRNumber() (string, error) {
 	return fmt.Sprintf("%d", prs[0].Number), nil
 }
 
+// performPRCheckout は指定されたPR番号のブランチをチェックアウトします。
+//
+// パラメータ:
+//   - prNumber: チェックアウトするPRの番号
+//
+// 戻り値:
+//   - string: チェックアウトしたブランチ名
+//   - error: エラーが発生した場合のエラー情報
+//
+// 内部処理:
+//   1. gh pr checkout <prNumber> でPRのブランチをチェックアウト
+//   2. チェックアウト後の現在のブランチ名を取得して返す
 func performPRCheckout(prNumber string) (string, error) {
 	cmd := exec.Command("gh", "pr", "checkout", prNumber)
 	cmd.Stdout = os.Stdout
@@ -174,6 +233,14 @@ func performPRCheckout(prNumber string) (string, error) {
 	return branch, nil
 }
 
+// popStashNow は最新のスタッシュを復元します。
+//
+// 戻り値:
+//   - error: スタッシュの復元に失敗した場合のエラー情報
+//
+// 内部処理:
+//   git stash pop コマンドで最新のスタッシュを復元します。
+//   エラー発生時（PRチェックアウト失敗など）のロールバックに使用されます。
 func popStashNow() error {
 	cmd := exec.Command("git", "stash", "pop")
 	cmd.Stdout = os.Stdout
@@ -181,6 +248,8 @@ func popStashNow() error {
 	return cmd.Run()
 }
 
+// init は pr-checkout コマンドを root コマンドに登録します。
+// この関数はパッケージの初期化時に自動的に呼び出されます。
 func init() {
 	rootCmd.AddCommand(prCheckoutCmd)
 }

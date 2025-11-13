@@ -1,3 +1,33 @@
+// ================================================================================
+// step.go
+// ================================================================================
+// このファイルは git-plus の step コマンドを実装しています。
+//
+// 【概要】
+// step コマンドは、リポジトリの総ステップ数（行数）とユーザーごとの貢献度を
+// 分析・集計する機能を提供します。追加・削除・純増・更新行数などの詳細な統計情報を
+// テキストファイルとCSVファイルの両方に出力します。
+//
+// 【主な機能】
+// - リポジトリ全体の総行数の集計
+// - ユーザーごとの追加/削除/更新行数の統計
+// - 現在のコードベースでの各ユーザーの貢献度（行数）
+// - 期間を指定した統計の抽出（過去N週間/月/年、または指定日以降）
+// - 初回コミットの除外オプション（デフォルトで有効）
+// - 統計結果のテキストファイルとCSVファイルへの自動保存
+//
+// 【使用例】
+//   git-plus step                    # 全期間のステップ数を表示
+//   git-plus step -w 1               # 過去1週間
+//   git-plus step -m 3               # 過去3ヶ月
+//   git-plus step --since 2024-01-01 # 指定日以降
+//   git-plus step --include-initial  # 初回コミットを含める
+//
+// 【出力ファイル】
+// - git_step_<期間>_<日付>.txt: 人間が読みやすいテキスト形式
+// - git_step_<期間>_<日付>.csv: 表計算ソフトで処理可能なCSV形式
+// ================================================================================
+
 package cmd
 
 import (
@@ -12,27 +42,30 @@ import (
 	"github.com/tonbiattack/git-plus/internal/gitcmd"
 )
 
-// AuthorStats はユーザーごとの統計情報を表す構造体
+// AuthorStats はユーザーごとの統計情報を表す構造体です。
+// コミット履歴から集計される各種メトリクスを保持します。
 type AuthorStats struct {
-	Name          string
-	Added         int
-	Deleted       int
-	Net           int
-	Modified      int
-	CurrentCode   int
-	Commits       int
-	AvgCommitSize float64
+	Name          string  // 作成者名
+	Added         int     // 追加された行数の合計
+	Deleted       int     // 削除された行数の合計
+	Net           int     // 純増行数（追加 - 削除）
+	Modified      int     // 更新行数（追加 + 削除）
+	CurrentCode   int     // 現在のコードベースでの担当行数
+	Commits       int     // コミット数
+	AvgCommitSize float64 // 1コミットあたりの平均更新行数
 }
 
 var (
-	stepSince          string
-	stepUntil          string
-	stepWeeks          int
-	stepMonths         int
-	stepYears          int
-	stepIncludeInitial bool
+	stepSince          string // 集計開始日時（YYYY-MM-DD形式）
+	stepUntil          string // 集計終了日時（YYYY-MM-DD形式）
+	stepWeeks          int    // 過去N週間を集計
+	stepMonths         int    // 過去Nヶ月を集計
+	stepYears          int    // 過去N年を集計
+	stepIncludeInitial bool   // 初回コミットを含めるかどうか
 )
 
+// stepCmd は step コマンドの定義です。
+// リポジトリのステップ数とユーザーごとの貢献度を分析・表示します。
 var stepCmd = &cobra.Command{
 	Use:   "step",
 	Short: "リポジトリのステップ数とユーザーごとの貢献度を表示",
@@ -112,6 +145,20 @@ var stepCmd = &cobra.Command{
 	},
 }
 
+// collectAuthorStats は全コミット履歴から作成者ごとの統計情報を収集します。
+//
+// パラメータ:
+//   - since: 集計開始日時（空文字列の場合は全期間）
+//   - until: 集計終了日時（空文字列の場合は現在まで）
+//   - excludeInitial: 初回コミットを除外するかどうか
+//
+// 戻り値:
+//   - []AuthorStats: 作成者ごとの統計情報のスライス
+//
+// 内部処理:
+//   git log --all --numstat コマンドを実行し、各コミットの追加/削除行数を
+//   作成者ごとに集計します。初回コミットの除外オプションが有効な場合は、
+//   最初のコミット（親を持たないコミット）を統計から除外します。
 func collectAuthorStats(since, until string, excludeInitial bool) []AuthorStats {
 	var initialCommitHash string
 	if excludeInitial {
@@ -196,6 +243,18 @@ func collectAuthorStats(since, until string, excludeInitial bool) []AuthorStats 
 	return stats
 }
 
+// getTotalLines は現在のリポジトリの総行数を計算します。
+//
+// 戻り値:
+//   - int: リポジトリ内の全ファイルの総行数
+//
+// 内部処理:
+//   1. git ls-files で追跡されているファイル一覧を取得
+//   2. 各ファイルを読み込んで行数をカウント
+//   3. 全ファイルの行数を合計
+//
+// 備考:
+//   読み込みに失敗したファイルはスキップされます。
 func getTotalLines() int {
 	output, err := gitcmd.Run("ls-files")
 	if err != nil {
@@ -225,6 +284,19 @@ func getTotalLines() int {
 	return totalLines
 }
 
+// getCodeByAuthor は現在のコードベースにおける各作成者の貢献行数を計算します。
+//
+// パラメータ:
+//   - since: 集計開始日時（空文字列の場合は全期間）
+//   - until: 集計終了日時（空文字列の場合は現在まで）
+//
+// 戻り値:
+//   - map[string]int: 作成者名をキーとし、担当行数を値とするマップ
+//
+// 内部処理:
+//   git blame --line-porcelain コマンドを使用して、現在のコードベースの
+//   各行がどの作成者によって書かれたかを調べ、作成者ごとに行数を集計します。
+//   期間指定がある場合は、その期間内のコミットのみを対象とします。
 func getCodeByAuthor(since, until string) map[string]int {
 	output, err := gitcmd.Run("ls-files")
 	if err != nil {
@@ -276,6 +348,18 @@ func getCodeByAuthor(since, until string) map[string]int {
 	return authorLines
 }
 
+// getValidCommits は指定された期間内の有効なコミットハッシュの集合を取得します。
+//
+// パラメータ:
+//   - since: 集計開始日時（空文字列の場合は全期間）
+//   - until: 集計終了日時（空文字列の場合は現在まで）
+//
+// 戻り値:
+//   - map[string]bool: コミットハッシュをキーとするマップ（存在確認用）
+//
+// 内部処理:
+//   git log --all --pretty=format:%H コマンドで指定期間内の全コミットの
+//   ハッシュを取得し、高速な存在確認ができるようマップに格納します。
 func getValidCommits(since, until string) map[string]bool {
 	cmdArgs := []string{"log", "--all", "--pretty=format:%H"}
 	if since != "" {
@@ -302,6 +386,24 @@ func getValidCommits(since, until string) map[string]bool {
 	return commits
 }
 
+// showStats は統計情報をコンソールに表示します。
+//
+// パラメータ:
+//   - stats: ユーザーごとの統計情報
+//   - totalAdded: 全体の追加行数
+//   - totalDeleted: 全体の削除行数
+//   - totalNet: 全体の純増行数
+//   - totalModified: 全体の更新行数
+//   - totalCommits: 全体のコミット数
+//   - currentLines: 現在のリポジトリ総行数
+//   - since: 集計開始日時
+//   - until: 集計終了日時
+//
+// 表示内容:
+//   - 集計期間
+//   - 現在のリポジトリ総行数
+//   - 全体統計（追加/削除/純増/更新行数、総コミット数）
+//   - ユーザー別統計（コード割合が多い順にソート）
 func showStats(stats []AuthorStats, totalAdded, totalDeleted, totalNet, totalModified, totalCommits, currentLines int, since, until string) {
 	fmt.Println("=== リポジトリステップ数統計 ===")
 	fmt.Println()
@@ -386,6 +488,22 @@ func showStats(stats []AuthorStats, totalAdded, totalDeleted, totalNet, totalMod
 	fmt.Println()
 }
 
+// saveStatsToFile は統計情報をテキストファイルに保存します。
+//
+// パラメータ:
+//   - stats: ユーザーごとの統計情報
+//   - totalAdded: 全体の追加行数
+//   - totalDeleted: 全体の削除行数
+//   - totalNet: 全体の純増行数
+//   - totalModified: 全体の更新行数
+//   - totalCommits: 全体のコミット数
+//   - currentLines: 現在のリポジトリ総行数
+//   - since: 集計開始日時
+//   - until: 集計終了日時
+//
+// ファイル名形式:
+//   git_step_<期間>_<日付>.txt
+//   例: git_step_20240101_2025-11-13.txt または git_step_all_2025-11-13.txt
 func saveStatsToFile(stats []AuthorStats, totalAdded, totalDeleted, totalNet, totalModified, totalCommits, currentLines int, since, until string) {
 	filename := "git_step"
 	if since != "" {
@@ -485,6 +603,27 @@ func saveStatsToFile(stats []AuthorStats, totalAdded, totalDeleted, totalNet, to
 	fmt.Printf("\n結果を %s に保存しました。\n", filename)
 }
 
+// saveStatsToCSV は統計情報をCSVファイルに保存します。
+//
+// パラメータ:
+//   - stats: ユーザーごとの統計情報
+//   - totalAdded: 全体の追加行数
+//   - totalDeleted: 全体の削除行数
+//   - totalNet: 全体の純増行数
+//   - totalModified: 全体の更新行数
+//   - totalCommits: 全体のコミット数
+//   - currentLines: 現在のリポジトリ総行数
+//   - since: 集計開始日時
+//   - until: 集計終了日時
+//
+// ファイル名形式:
+//   git_step_<期間>_<日付>.csv
+//   例: git_step_20240101_2025-11-13.csv または git_step_all_2025-11-13.csv
+//
+// CSV形式:
+//   ヘッダー行 + データ行
+//   カラム: 作成者,追加行数,削除行数,純増行数,更新行数,現在行数,コミット数,
+//          平均コミットサイズ,追加比率(%),削除比率(%),更新比率(%),コード割合(%)
 func saveStatsToCSV(stats []AuthorStats, totalAdded, totalDeleted, totalNet, totalModified, totalCommits, currentLines int, since, until string) {
 	filename := "git_step"
 	if since != "" {
@@ -551,6 +690,16 @@ func saveStatsToCSV(stats []AuthorStats, totalAdded, totalDeleted, totalNet, tot
 	fmt.Printf("CSVファイルを %s に保存しました。\n", filename)
 }
 
+// formatNum は整数を3桁ごとにカンマ区切りの文字列に変換します。
+//
+// パラメータ:
+//   - n: 変換する整数
+//
+// 戻り値:
+//   - string: カンマ区切りの文字列（例: 1234567 → "1,234,567"）
+//
+// 備考:
+//   負の数にも対応しており、符号は先頭に付与されます。
 func formatNum(n int) string {
 	sign := ""
 	if n < 0 {
@@ -570,6 +719,16 @@ func formatNum(n int) string {
 	return sign + result
 }
 
+// init は step コマンドを root コマンドに登録し、フラグを設定します。
+// この関数はパッケージの初期化時に自動的に呼び出されます。
+//
+// 設定されるフラグ:
+//   -s, --since: 集計開始日時（YYYY-MM-DD形式）
+//   -u, --until: 集計終了日時（YYYY-MM-DD形式）
+//   -w, --weeks: 過去N週間を集計
+//   -m, --months: 過去Nヶ月を集計
+//   -y, --years: 過去N年を集計
+//   --include-initial: 初回コミットを含める（デフォルトは除外）
 func init() {
 	stepCmd.Flags().StringVarP(&stepSince, "since", "s", "", "集計開始日時")
 	stepCmd.Flags().StringVarP(&stepUntil, "until", "u", "", "集計終了日時")

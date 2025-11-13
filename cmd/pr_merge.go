@@ -1,3 +1,29 @@
+// ================================================================================
+// pr_merge.go
+// ================================================================================
+// このファイルは git-plus の pr-merge コマンドを実装しています。
+//
+// 【概要】
+// pr-merge コマンドは、PRの作成からマージ、ブランチ削除、ベースブランチへの
+// 切り替えまでを一気に実行する自動化機能を提供します。GitHub CLI (gh) を使用します。
+//
+// 【主な機能】
+// - タイトル・本文なしでのPR作成（--fill オプションで自動生成）
+// - PRの即座のマージとブランチ削除
+// - ベースブランチへの自動切り替え
+// - 最新の変更の自動取得（git pull）
+// - 対話的なベースブランチの選択
+// - 各ステップの進行状況表示
+//
+// 【使用例】
+//   git-plus pr-merge              # 対話的にベースブランチを入力
+//   git-plus pr-merge main         # main ブランチへマージ
+//   git-plus pr-merge develop      # develop ブランチへマージ
+//
+// 【必要な外部ツール】
+// - GitHub CLI (gh): https://cli.github.com/
+// ================================================================================
+
 package cmd
 
 import (
@@ -11,6 +37,8 @@ import (
 	"github.com/tonbiattack/git-plus/internal/ui"
 )
 
+// prMergeCmd は pr-merge コマンドの定義です。
+// PRの作成からマージ、ブランチ削除までを一気に実行します。
 var prMergeCmd = &cobra.Command{
 	Use:   "pr-merge [ベースブランチ名]",
 	Short: "PRの作成からマージ、ブランチ削除までを一気に実行",
@@ -94,6 +122,14 @@ var prMergeCmd = &cobra.Command{
 	},
 }
 
+// getCurrentBranchForPR は現在チェックアウトされているブランチ名を取得します。
+//
+// 戻り値:
+//   - string: 現在のブランチ名（空白や改行は除去されます）
+//   - error: git コマンドの実行に失敗した場合のエラー情報
+//
+// 内部処理:
+//   git branch --show-current コマンドを実行してブランチ名を取得します。
 func getCurrentBranchForPR() (string, error) {
 	cmd := exec.Command("git", "branch", "--show-current")
 	output, err := cmd.Output()
@@ -103,6 +139,18 @@ func getCurrentBranchForPR() (string, error) {
 	return strings.TrimSpace(string(output)), nil
 }
 
+// createPRForMerge は指定されたベースブランチとヘッドブランチでPRを作成します。
+//
+// パラメータ:
+//   - base: マージ先のベースブランチ名
+//   - head: マージ元のヘッドブランチ名
+//
+// 戻り値:
+//   - error: PR作成に失敗した場合のエラー情報
+//
+// 内部処理:
+//   gh pr create --base <base> --head <head> --fill コマンドを実行します。
+//   --fill オプションにより、タイトルと本文はコミット履歴から自動生成されます。
 func createPRForMerge(base, head string) error {
 	cmd := exec.Command("gh", "pr", "create",
 		"--base", base,
@@ -114,6 +162,15 @@ func createPRForMerge(base, head string) error {
 	return cmd.Run()
 }
 
+// mergePRAndDeleteBranch は最新のPRをマージしてブランチを削除します。
+//
+// 戻り値:
+//   - error: マージまたはブランチ削除に失敗した場合のエラー情報
+//
+// 内部処理:
+//   gh pr merge --merge --delete-branch コマンドを実行します。
+//   --merge オプションでマージコミットを作成し、
+//   --delete-branch オプションでリモートブランチを自動削除します。
 func mergePRAndDeleteBranch() error {
 	cmd := exec.Command("gh", "pr", "merge",
 		"--merge",
@@ -124,6 +181,16 @@ func mergePRAndDeleteBranch() error {
 	return cmd.Run()
 }
 
+// switchToBranch は指定されたブランチに切り替えます。
+//
+// パラメータ:
+//   - branch: 切り替え先のブランチ名
+//
+// 戻り値:
+//   - error: ブランチの切り替えに失敗した場合のエラー情報
+//
+// 内部処理:
+//   git switch <ブランチ名> コマンドを実行します。
 func switchToBranch(branch string) error {
 	cmd := exec.Command("git", "switch", branch)
 	cmd.Stdout = os.Stdout
@@ -132,6 +199,13 @@ func switchToBranch(branch string) error {
 	return cmd.Run()
 }
 
+// pullLatestChanges はリモートから最新の変更を取得します。
+//
+// 戻り値:
+//   - error: pull に失敗した場合のエラー情報
+//
+// 内部処理:
+//   git pull コマンドを実行して、リモートの変更をローカルに統合します。
 func pullLatestChanges() error {
 	cmd := exec.Command("git", "pull")
 	cmd.Stdout = os.Stdout
@@ -140,6 +214,8 @@ func pullLatestChanges() error {
 	return cmd.Run()
 }
 
+// init は pr-merge コマンドを root コマンドに登録します。
+// この関数はパッケージの初期化時に自動的に呼び出されます。
 func init() {
 	rootCmd.AddCommand(prMergeCmd)
 }
