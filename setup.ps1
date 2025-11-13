@@ -28,8 +28,7 @@ $commands = @(
     "git-resume",
     "git-create-repository",
     "git-new-tag",
-    "git-browse",
-    "git-issue-branch"
+    "git-browse"
 )
 
 Write-Host ""
@@ -90,7 +89,6 @@ Write-Host ""
 Write-Host "使用例:" -ForegroundColor Cyan
 Write-Host "  git newbranch feature-xxx"
 Write-Host "  git new-tag feature"
-Write-Host "  git issue-branch 123"
 Write-Host "  git browse"
 Write-Host ""
 Write-Host "全コマンド一覧:" -ForegroundColor Cyan
