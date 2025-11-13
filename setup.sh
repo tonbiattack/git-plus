@@ -32,7 +32,6 @@ commands=(
     "git-create-repository"
     "git-new-tag"
     "git-browse"
-    "git-issue-branch"
 )
 
 echo ""
@@ -98,7 +97,6 @@ echo ""
 echo -e "\033[36m使用例:\033[0m"
 echo "  git newbranch feature-xxx"
 echo "  git new-tag feature"
-echo "  git issue-branch 123"
 echo "  git browse"
 echo ""
 echo -e "\033[36m全コマンド一覧:\033[0m"
