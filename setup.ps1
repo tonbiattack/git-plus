@@ -1,5 +1,5 @@
 # Git Plus セットアップスクリプト (Windows)
-# 全てのgit-plusコマンドをビルドしてPATHに追加します
+# git-plusコマンドをビルドしてPATHに追加します
 
 Write-Host "=== Git Plus セットアップ ===" -ForegroundColor Cyan
 Write-Host ""
@@ -9,7 +9,25 @@ $binPath = "$env:USERPROFILE\bin"
 Write-Host "binディレクトリを作成中: $binPath" -ForegroundColor Yellow
 New-Item -ItemType Directory -Force -Path $binPath | Out-Null
 
-# 全コマンドのリスト
+Write-Host ""
+Write-Host "git-plusコマンドをビルド中..." -ForegroundColor Yellow
+Write-Host ""
+
+Write-Host "  ビルド中: git-plus... " -NoNewline
+
+$output = go build -o "$binPath\git-plus.exe" . 2>&1
+
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "✓ OK" -ForegroundColor Green
+} else {
+    Write-Host "✗ FAILED" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "エラー: ビルドに失敗しました" -ForegroundColor Red
+    Write-Host "    $output" -ForegroundColor Red
+    exit 1
+}
+
+# 各コマンド用のコピーを作成
 $commands = @(
     "git-newbranch",
     "git-reset-tag",
@@ -34,29 +52,32 @@ $commands = @(
 )
 
 Write-Host ""
-Write-Host "全 $($commands.Count) コマンドをビルド中..." -ForegroundColor Yellow
+Write-Host "コマンドのコピーを作成中..." -ForegroundColor Yellow
 Write-Host ""
 
 $successCount = 0
-$failCount = 0
 
 foreach ($cmd in $commands) {
-    Write-Host "  ビルド中: $cmd... " -NoNewline
+    Write-Host "  作成中: $cmd... " -NoNewline
 
-    $output = go build -o "$binPath\$cmd.exe" ".\cmd\$cmd" 2>&1
+    # 既存のファイルを削除
+    $targetPath = "$binPath\$cmd.exe"
+    if (Test-Path $targetPath) {
+        Remove-Item $targetPath -Force
+    }
 
-    if ($LASTEXITCODE -eq 0) {
+    Copy-Item "$binPath\git-plus.exe" $targetPath
+
+    if ($LASTEXITCODE -eq 0 -or (Test-Path $targetPath)) {
         Write-Host "✓ OK" -ForegroundColor Green
         $successCount++
     } else {
         Write-Host "✗ FAILED" -ForegroundColor Red
-        Write-Host "    エラー: $output" -ForegroundColor Red
-        $failCount++
     }
 }
 
 Write-Host ""
-Write-Host "ビルド完了: $successCount 成功, $failCount 失敗" -ForegroundColor $(if ($failCount -eq 0) { "Green" } else { "Yellow" })
+Write-Host "コピー作成完了: $successCount 個" -ForegroundColor Green
 
 # PATHに追加
 Write-Host ""
@@ -93,10 +114,7 @@ Write-Host "  git newbranch feature-xxx"
 Write-Host "  git new-tag feature"
 Write-Host "  git browse"
 Write-Host ""
-Write-Host "全コマンド一覧:" -ForegroundColor Cyan
-Write-Host "  git help          # 通常のgitヘルプ"
-foreach ($cmd in $commands) {
-    $cmdName = $cmd -replace "git-", "git "
-    Write-Host "  $cmdName -h"
-}
+Write-Host "ヘルプを表示:" -ForegroundColor Cyan
+Write-Host "  git newbranch -h"
+Write-Host "  git step -h"
 Write-Host ""

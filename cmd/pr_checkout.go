@@ -1,0 +1,186 @@
+package cmd
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"os/exec"
+	"time"
+
+	"github.com/spf13/cobra"
+	"github.com/tonbiattack/git-plus/internal/pausestate"
+	"github.com/tonbiattack/git-plus/internal/ui"
+)
+
+var prCheckoutCmd = &cobra.Command{
+	Use:   "pr-checkout [PR番号]",
+	Short: "最新または指定されたプルリクエストをチェックアウト",
+	Long: `最新または指定されたプルリクエストのブランチを取得してチェックアウトします。
+現在の作業を自動的に保存（git pause と同様）するため、後で git resume で戻ることができます。
+
+引数なしで実行すると、最新のオープンなPRをチェックアウトします。
+PR番号を指定すると、その番号のPRをチェックアウトします。
+
+内部的に GitHub CLI (gh) を使用してプルリクエストと連携します。`,
+	Example: `  git-plus pr-checkout          # 最新のPRをチェックアウト
+  git-plus pr-checkout 123      # PR #123 をチェックアウト`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		// GitHub CLI の確認
+		if !checkGitHubCLI() {
+			return fmt.Errorf("GitHub CLI (gh) がインストールされていません\nインストール方法: https://cli.github.com/")
+		}
+
+		// PR番号を取得
+		var prNumber string
+		var err error
+
+		if len(args) > 0 {
+			prNumber = args[0]
+			fmt.Printf("PR #%s をチェックアウトします\n", prNumber)
+		} else {
+			fmt.Println("最新のPRを取得中...")
+			prNumber, err = fetchLatestPRNumber()
+			if err != nil {
+				return fmt.Errorf("最新のPRの取得に失敗: %w", err)
+			}
+			if prNumber == "" {
+				return fmt.Errorf("オープンなPRが見つかりません")
+			}
+			fmt.Printf("最新のPR #%s をチェックアウトします\n", prNumber)
+		}
+
+		// 既に pause 状態かチェック
+		exists, err := pausestate.Exists()
+		if err != nil {
+			return fmt.Errorf("状態の確認に失敗: %w", err)
+		}
+
+		if exists {
+			state, err := pausestate.Load()
+			if err != nil {
+				return fmt.Errorf("既存の状態の読み込みに失敗: %w", err)
+			}
+
+			fmt.Printf("警告: 既に pause 状態です（%s → %s）\n", state.FromBranch, state.ToBranch)
+
+			if !ui.Confirm("上書きしてPRをチェックアウトしますか？", false) {
+				fmt.Println("キャンセルしました")
+				return nil
+			}
+		}
+
+		// 現在のブランチを取得
+		currentBranch, err := getBranchCurrent()
+		if err != nil {
+			return fmt.Errorf("現在のブランチの取得に失敗: %w", err)
+		}
+
+		// 変更があるかチェック
+		hasChanges, err := checkUncommittedChanges()
+		if err != nil {
+			return fmt.Errorf("変更の確認に失敗: %w", err)
+		}
+
+		var stashRef string
+		stashMessage := fmt.Sprintf("git-pr-checkout: from %s", currentBranch)
+
+		if hasChanges {
+			fmt.Println("変更を保存中...")
+			stashRef, err = createStashWithMessage(stashMessage)
+			if err != nil {
+				return fmt.Errorf("スタッシュの作成に失敗: %w", err)
+			}
+			fmt.Printf("✓ 変更を保存しました: %s\n", stashRef)
+		} else {
+			fmt.Println("変更がないため、スタッシュはスキップします")
+			stashRef = ""
+		}
+
+		// PRをチェックアウト
+		fmt.Printf("PR #%s をチェックアウト中...\n", prNumber)
+		targetBranch, err := performPRCheckout(prNumber)
+		if err != nil {
+			// エラー時はスタッシュを戻す
+			if stashRef != "" {
+				fmt.Println("スタッシュを復元中...")
+				if popErr := popStashNow(); popErr != nil {
+					fmt.Printf("警告: スタッシュの復元に失敗: %v\n", popErr)
+					fmt.Println("手動で復元してください: git stash pop")
+				}
+			}
+			return fmt.Errorf("PRのチェックアウトに失敗: %w", err)
+		}
+
+		// 状態を保存
+		state := &pausestate.PauseState{
+			FromBranch:   currentBranch,
+			ToBranch:     targetBranch,
+			StashRef:     stashRef,
+			StashMessage: stashMessage,
+			Timestamp:    time.Now(),
+		}
+
+		if err := pausestate.Save(state); err != nil {
+			return fmt.Errorf("状態の保存に失敗: %w", err)
+		}
+
+		fmt.Printf("✓ PR #%s のブランチ '%s' にチェックアウトしました\n", prNumber, targetBranch)
+		fmt.Println("\n元のブランチに戻るには: git-plus resume")
+		return nil
+	},
+}
+
+func checkGitHubCLI() bool {
+	cmd := exec.Command("gh", "--version")
+	err := cmd.Run()
+	return err == nil
+}
+
+func fetchLatestPRNumber() (string, error) {
+	cmd := exec.Command("gh", "pr", "list", "--limit", "1", "--json", "number")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+
+	var prs []struct {
+		Number int `json:"number"`
+	}
+
+	if err := json.Unmarshal(output, &prs); err != nil {
+		return "", fmt.Errorf("JSONのパースに失敗: %w", err)
+	}
+
+	if len(prs) == 0 {
+		return "", nil
+	}
+
+	return fmt.Sprintf("%d", prs[0].Number), nil
+}
+
+func performPRCheckout(prNumber string) (string, error) {
+	cmd := exec.Command("gh", "pr", "checkout", prNumber)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return "", err
+	}
+
+	branch, err := getBranchCurrent()
+	if err != nil {
+		return "", fmt.Errorf("チェックアウト後のブランチ名取得に失敗: %w", err)
+	}
+
+	return branch, nil
+}
+
+func popStashNow() error {
+	cmd := exec.Command("git", "stash", "pop")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
+
+func init() {
+	rootCmd.AddCommand(prCheckoutCmd)
+}
