@@ -9,15 +9,15 @@
 //
 // 【主な機能】
 // - PRのマージ（merge commit / squash / rebase）
-// - ブランチの削除
+// - デフォルト: マージコミットで対話なしで直接実行
+// - ブランチの削除（デフォルトで有効）
 // - 自動マージの設定
 // - すべての gh pr merge のオプションをサポート
 //
 // 【使用例】
-//   git-plus merge-pr              # 対話的にPRをマージ
-//   git-plus merge-pr 89           # PR #89 をマージ
-//   git-plus merge-pr --squash     # スカッシュマージ
-//   git-plus merge-pr --delete-branch  # ブランチを削除
+//   git-plus merge-pr              # PR をマージコミットで直接マージ（ブランチも削除）
+//   git-plus merge-pr 89           # PR #89 をマージコミットで直接マージ（ブランチも削除）
+//   git-plus merge-pr --squash     # スカッシュマージ（ブランチも削除）
 //
 // 【内部仕様】
 // - GitHub CLI (gh) の gh pr merge コマンドをそのままラップ
@@ -44,24 +44,28 @@ var mergePRCmd = &cobra.Command{
 	Short: "プルリクエストをマージ（gh pr merge のラッパー）",
 	Long: `GitHub CLI の gh pr merge をラップして、Git コマンドとして実行できるようにします。
 
-引数なしで実行すると、対話的にマージ方法やブランチ削除を選択できます。
+デフォルトの動作：
+  - マージコミットで対話なしで直接実行（--merge が自動適用）
+  - マージ後にブランチを削除（--delete-branch が自動適用）
+
+引数なしで実行すると、カレントブランチのPRをマージします。
 PR番号を指定すると、その番号のPRをマージします。
 
 すべての gh pr merge のオプションがそのまま使用できます：
   --merge           マージコミットを作成（デフォルト）
-  --squash          スカッシュマージ
-  --rebase          リベースマージ
-  --delete-branch   マージ後にブランチを削除
+  --squash          スカッシュマージ（デフォルトを上書き）
+  --rebase          リベースマージ（デフォルトを上書き）
+  --delete-branch   マージ後にブランチを削除（デフォルト）
   --auto            ステータスチェック通過後に自動マージ
   --body <text>     マージコミットのボディ
   --subject <text>  マージコミットのサブジェクト
 
 内部的に GitHub CLI (gh) を使用してプルリクエストをマージします。`,
-	Example: `  git-plus merge-pr                    # 対話的にPRをマージ
-  git-plus merge-pr 89                 # PR #89 をマージ
-  git-plus merge-pr --squash           # スカッシュマージ
-  git-plus merge-pr --delete-branch    # ブランチを削除
-  git-plus merge-pr 89 --squash --delete-branch --auto`,
+	Example: `  git-plus merge-pr                    # カレントブランチのPRをマージコミットで直接マージ
+  git-plus merge-pr 89                 # PR #89 をマージコミットで直接マージ
+  git-plus merge-pr --squash           # スカッシュマージで直接マージ
+  git-plus merge-pr --rebase           # リベースマージで直接マージ
+  git-plus merge-pr 89 --squash --auto # PR #89 をスカッシュマージで自動マージ`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// GitHub CLI の確認
 		if !checkGitHubCLI() {
@@ -70,6 +74,30 @@ PR番号を指定すると、その番号のPRをマージします。
 
 		// gh pr merge コマンドを構築
 		ghArgs := []string{"pr", "merge"}
+
+		// デフォルトで --merge と --delete-branch を追加
+		// ユーザーが既に指定している場合は追加しない
+		hasDeleteBranch := false
+		hasMergeMethod := false
+		for _, arg := range args {
+			if arg == "--delete-branch" || arg == "-d" {
+				hasDeleteBranch = true
+			}
+			if arg == "--merge" || arg == "--squash" || arg == "--rebase" {
+				hasMergeMethod = true
+			}
+		}
+
+		// デフォルトでマージコミットを使用（対話なしで直接実行）
+		if !hasMergeMethod {
+			ghArgs = append(ghArgs, "--merge")
+		}
+
+		// デフォルトでブランチを削除
+		if !hasDeleteBranch {
+			ghArgs = append(ghArgs, "--delete-branch")
+		}
+
 		ghArgs = append(ghArgs, args...)
 
 		// gh コマンドを実行
