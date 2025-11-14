@@ -26,6 +26,7 @@ Git の日常操作を少しだけ楽にするためのカスタムコマンド�
 - `git pr-checkout`：最新または指定されたプルリクエストをチェックアウトします。現在の作業を自動保存し、git resumeで復元できます。
 - `git clone-org`：GitHub組織のリポジトリを一括クローンします。最終更新日時でソートし、最新N個のみをクローン可能。既存リポジトリはスキップし、アーカイブやshallowクローンのオプションも利用可能です。
 - `git back`：前のブランチやタグに戻ります。`git checkout -` のショートカットで、ブランチやタグ間の素早い移動に便利です。
+- `git issue-edit`：GitHubのopenしているissueの一覧を表示し、選択したissueをエディタで編集します。基本的に題名は編集せず、本文の編集に特化しています。
 
 Cobra フレームワークで実装された単一のバイナリから、`git-xxx` 形式の名前でシンボリックリンク（Linux/macOS）またはコピー（Windows）が作成され、`git xxx` として呼び出せる Git 拡張サブコマンドとして機能します。
 
@@ -60,7 +61,7 @@ cd git-plus
 - git-plus バイナリのビルド
 - `~/bin`（Windows: `%USERPROFILE%\bin`）への配置
 - 各コマンド用のシンボリックリンク作成（Linux/macOS）またはコピー作成（Windows）
-  - `git-newbranch`, `git-reset-tag`, `git-amend` など22個のコマンド
+  - `git-newbranch`, `git-reset-tag`, `git-amend` など25個のコマンド
 - PATH環境変数への追加
 
 これにより、`git newbranch`、`git step` などの形式でコマンドを呼び出せます。
@@ -102,6 +103,7 @@ ln -s git-plus git-browse
 ln -s git-plus git-pr-checkout
 ln -s git-plus git-clone-org
 ln -s git-plus git-back
+ln -s git-plus git-issue-edit
 
 # PATHに追加（まだ追加していない場合）
 echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
@@ -144,6 +146,7 @@ Copy-Item "$binPath\git-plus.exe" "$binPath\git-browse.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-pr-checkout.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-clone-org.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-back.exe"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-issue-edit.exe"
 
 # PATHに追加（まだ追加していない場合）
 # システム環境変数に追加する場合は管理者権限で実行
@@ -1197,6 +1200,119 @@ gh auth login
 ```
 
 認証後、HTTPS経由でリポジトリをクローンします。SSH認証の設定は不要です。
+
+### git issue-edit
+
+GitHubのopenしているissueの一覧を表示し、選択したissueをエディタで編集するコマンドです。
+
+**使い方:**
+```bash
+git issue-edit
+```
+
+**処理フロー:**
+1. GitHubのopenしているissueを一覧表示
+2. 番号を入力してissueを選択
+3. 選択したissueの本文を一時ファイルに書き出し
+4. ユーザーが設定しているエディタで編集
+5. 編集内容でissueを更新
+
+**使用例:**
+```bash
+git issue-edit
+```
+
+**実行の流れ:**
+```
+Open Issue一覧 (3 個):
+
+1. #42: ログイン機能の不具合
+   ログインボタンを押しても反応がない...
+
+2. #43: ダークモード対応
+   ダークモードのデザインを実装してほしい...
+
+3. #44: パフォーマンス改善
+   初回読み込みが遅いため改善が必要...
+
+編集するissueを選択してください (番号を入力、Enterでキャンセル): 2
+
+選択されたissue: #43
+タイトル: ダークモード対応
+URL: https://github.com/username/repo/issues/43
+
+エディタで編集中... (code --wait)
+✓ issueを更新しました
+```
+
+**エディタの設定:**
+
+エディタは以下の優先順位で自動検出されます：
+1. `git config core.editor` の設定
+2. 環境変数 `VISUAL`
+3. 環境変数 `EDITOR`
+4. デフォルト（vi）
+
+VSCodeを使用する場合は、以下のように設定します：
+```bash
+git config --global core.editor "code --wait"
+```
+
+**一時ファイルの形式:**
+
+エディタで開かれるファイルは以下のような形式です：
+```markdown
+# Issue #43: ダークモード対応
+# URL: https://github.com/username/repo/issues/43
+#
+# 以下のissue本文を編集してください。
+# 1行目の '#' で始まる行はコメントとして無視されます。
+# ファイルを保存して閉じると、issueが更新されます。
+# ========================================
+
+現在の本文がここに表示されます。
+この部分を編集して保存すると、issueが更新されます。
+```
+
+**主な機能:**
+- **一覧表示**: openしているissueを番号付きで表示
+- **プレビュー**: 各issueの本文の最初の50文字をプレビュー表示
+- **エディタ編集**: ユーザーが設定しているエディタで編集可能
+- **コメント行除外**: `#` で始まる行はコメントとして無視
+- **変更検出**: 変更がない場合は更新をスキップ
+
+**注意事項:**
+- GitHub CLI (`gh`) がインストールされている必要があります
+- `gh auth login` でログイン済みである必要があります
+- 基本的にissueの題名（title）は編集せず、本文（body）のみを編集します
+- 題名を変更したい場合は `gh issue edit <番号> --title "新しい題名"` を使用してください
+
+**GitHub CLI のインストール:**
+
+Windows (winget):
+```powershell
+winget install --id GitHub.cli
+```
+
+macOS (Homebrew):
+```bash
+brew install gh
+```
+
+Linux (Debian/Ubuntu):
+```bash
+sudo apt install gh
+```
+
+**認証方法:**
+```bash
+gh auth login
+```
+
+対話的に以下を選択:
+1. GitHub.com を選択
+2. HTTPS を選択
+3. ブラウザで認証を選択
 
 ## 開発メモ
 

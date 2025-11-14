@@ -80,13 +80,25 @@ PR番号を指定すると、その番号のPRをチェックアウトします�
 			fmt.Printf("最新のPR #%s をチェックアウトします\n", prNumber)
 		}
 
-		// 既に pause 状態かチェック
+		// 現在のブランチを取得
+		currentBranch, err := getBranchCurrent()
+		if err != nil {
+			return fmt.Errorf("現在のブランチの取得に失敗: %w", err)
+		}
+
+		// 変更があるかチェック
+		hasChanges, err := checkUncommittedChanges()
+		if err != nil {
+			return fmt.Errorf("変更の確認に失敗: %w", err)
+		}
+
+		// 既に pause 状態かチェック（変更がある場合のみ確認プロンプトを表示）
 		exists, err := pausestate.Exists()
 		if err != nil {
 			return fmt.Errorf("状態の確認に失敗: %w", err)
 		}
 
-		if exists {
+		if exists && hasChanges {
 			state, err := pausestate.Load()
 			if err != nil {
 				return fmt.Errorf("既存の状態の読み込みに失敗: %w", err)
@@ -98,18 +110,6 @@ PR番号を指定すると、その番号のPRをチェックアウトします�
 				fmt.Println("キャンセルしました")
 				return nil
 			}
-		}
-
-		// 現在のブランチを取得
-		currentBranch, err := getBranchCurrent()
-		if err != nil {
-			return fmt.Errorf("現在のブランチの取得に失敗: %w", err)
-		}
-
-		// 変更があるかチェック
-		hasChanges, err := checkUncommittedChanges()
-		if err != nil {
-			return fmt.Errorf("変更の確認に失敗: %w", err)
 		}
 
 		var stashRef string
