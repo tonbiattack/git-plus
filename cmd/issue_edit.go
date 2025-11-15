@@ -9,9 +9,9 @@
 //
 // 【主な機能】
 // - GitHubのopenしているissueの一覧取得
-// - issue番号での選択
+// - 番号での選択
 // - ユーザーが設定しているエディタ（VSCode等）での編集
-// - 題名（title）と本文（body）の両方を編集可能
+// - 基本的に題名は編集せず、本文（body）の編集に特化
 //
 // 【使用例】
 //   git-plus issue-edit          # issueの一覧を表示して選択・編集
@@ -50,19 +50,13 @@ type IssueEntry struct {
 	URL    string `json:"url"`
 }
 
-// IssueContent はエディタで編集されたissueの内容を表す構造体
-type IssueContent struct {
-	Title string
-	Body  string
-}
-
 // issueEditCmd は issue-edit コマンドの定義です。
 var issueEditCmd = &cobra.Command{
 	Use:   "issue-edit",
 	Short: "GitHubのissueを一覧表示して選択・編集",
-	Long: `GitHubのopenしているissueの一覧を表示し、issue番号で選択して編集できます。
+	Long: `GitHubのopenしているissueの一覧を表示し、番号で選択して編集できます。
 編集はユーザーが設定しているエディタ（VSCode等）で行えます。
-題名（title）と本文（body）の両方を編集できます。
+基本的に題名は編集せず、本文（body）の編集に特化しています。
 
 内部的に GitHub CLI (gh) を使用してissueと連携します。`,
 	Example: `  git-plus issue-edit          # issueの一覧を表示して選択・編集`,
@@ -85,8 +79,8 @@ var issueEditCmd = &cobra.Command{
 
 		// issue一覧を表示
 		fmt.Printf("Open Issue一覧 (%d 個):\n\n", len(issues))
-		for _, issue := range issues {
-			fmt.Printf("#%d: %s\n", issue.Number, issue.Title)
+		for i, issue := range issues {
+			fmt.Printf("%d. #%d: %s\n", i+1, issue.Number, issue.Title)
 			// bodyの最初の50文字を表示（プレビュー）
 			bodyPreview := strings.TrimSpace(issue.Body)
 			if len(bodyPreview) > 50 {
@@ -100,7 +94,7 @@ var issueEditCmd = &cobra.Command{
 
 		// issueを選択
 		reader := bufio.NewReader(os.Stdin)
-		fmt.Print("編集するissueを選択してください (issue番号を入力、Enterでキャンセル): ")
+		fmt.Print("編集するissueを選択してください (番号を入力、Enterでキャンセル): ")
 		input, err := reader.ReadString('\n')
 		if err != nil {
 			return fmt.Errorf("入力の読み込みに失敗しました: %w", err)
@@ -112,31 +106,20 @@ var issueEditCmd = &cobra.Command{
 			return nil
 		}
 
-		issueNumber, err := strconv.Atoi(input)
-		if err != nil {
-			return fmt.Errorf("無効な入力です。issue番号を数値で入力してください")
+		selection, err := strconv.Atoi(input)
+		if err != nil || selection < 1 || selection > len(issues) {
+			return fmt.Errorf("無効な番号です。1から%dの範囲で入力してください", len(issues))
 		}
 
-		// issue番号でissueを検索
-		var selectedIssue *IssueEntry
-		for i := range issues {
-			if issues[i].Number == issueNumber {
-				selectedIssue = &issues[i]
-				break
-			}
-		}
-
-		if selectedIssue == nil {
-			return fmt.Errorf("issue #%d が見つかりませんでした", issueNumber)
-		}
+		selectedIssue := issues[selection-1]
 
 		// 選択したissueの詳細を表示
 		fmt.Printf("\n選択されたissue: #%d\n", selectedIssue.Number)
 		fmt.Printf("タイトル: %s\n", selectedIssue.Title)
 		fmt.Printf("URL: %s\n\n", selectedIssue.URL)
 
-		// エディタで題名と本文を編集
-		if err := editIssue(selectedIssue); err != nil {
+		// エディタで本文を編集
+		if err := editIssueBody(&selectedIssue); err != nil {
 			return fmt.Errorf("issueの編集に失敗しました: %w", err)
 		}
 
@@ -168,8 +151,8 @@ func getOpenIssueList() ([]IssueEntry, error) {
 	return issues, nil
 }
 
-// editIssue は指定されたissueの題名と本文をエディタで編集します。
-func editIssue(issue *IssueEntry) error {
+// editIssueBody は指定されたissueの本文をエディタで編集します。
+func editIssueBody(issue *IssueEntry) error {
 	// エディタを取得
 	editor, err := getEditor()
 	if err != nil {
@@ -190,22 +173,19 @@ func editIssue(issue *IssueEntry) error {
 	}
 
 	// 編集後の内容を読み込み
-	newContent, err := readFileContent(tmpFile)
+	newBody, err := readFileContent(tmpFile)
 	if err != nil {
 		return fmt.Errorf("編集内容の読み込みに失敗: %w", err)
 	}
 
 	// 変更がない場合はスキップ
-	titleChanged := strings.TrimSpace(newContent.Title) != strings.TrimSpace(issue.Title)
-	bodyChanged := strings.TrimSpace(newContent.Body) != strings.TrimSpace(issue.Body)
-
-	if !titleChanged && !bodyChanged {
+	if strings.TrimSpace(newBody) == strings.TrimSpace(issue.Body) {
 		fmt.Println("変更がないため、更新をスキップしました。")
 		return nil
 	}
 
 	// issueを更新
-	if err := updateIssue(issue.Number, newContent.Title, newContent.Body); err != nil {
+	if err := updateIssueBody(issue.Number, newBody); err != nil {
 		return fmt.Errorf("issueの更新に失敗: %w", err)
 	}
 
@@ -238,27 +218,22 @@ func getEditor() (string, error) {
 	return "vi", nil
 }
 
-// createTempIssueFile はissueの題名と本文を含む一時ファイルを作成します。
+// createTempIssueFile はissueの本文を含む一時ファイルを作成します。
 func createTempIssueFile(issue *IssueEntry) (string, error) {
 	tmpDir := os.TempDir()
 	tmpFile := filepath.Join(tmpDir, fmt.Sprintf("issue-%d.md", issue.Number))
 
-	// ヘッダーコメント、題名、本文を書き込み
-	content := fmt.Sprintf(`# Issue #%d
+	// ヘッダーコメントと本文を書き込み
+	content := fmt.Sprintf(`# Issue #%d: %s
 # URL: %s
 #
-# 以下のissueの題名と本文を編集してください。
-# '#' で始まる行はコメントとして無視されます。
-# 'Title:' の後に題名を記載し、'---' の区切り線の後に本文を記載してください。
+# 以下のissue本文を編集してください。
+# 1行目の '#' で始まる行はコメントとして無視されます。
 # ファイルを保存して閉じると、issueが更新されます。
 # ========================================
 
-Title: %s
-
----
-
 %s
-`, issue.Number, issue.URL, issue.Title, issue.Body)
+`, issue.Number, issue.Title, issue.URL, issue.Body)
 
 	if err := os.WriteFile(tmpFile, []byte(content), 0600); err != nil {
 		return "", err
@@ -342,55 +317,29 @@ func parseCommand(command string) ([]string, error) {
 	return args, nil
 }
 
-// readFileContent はファイルの内容を読み込み、題名と本文を分離して返します。
-func readFileContent(filepath string) (*IssueContent, error) {
+// readFileContent はファイルの内容を読み込み、コメント行を除去します。
+func readFileContent(filepath string) (string, error) {
 	content, err := os.ReadFile(filepath)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	// コメント行（# で始まる行）を除去
 	lines := strings.Split(string(content), "\n")
-	var nonCommentLines []string
+	var bodyLines []string
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
 		if !strings.HasPrefix(trimmed, "#") {
-			nonCommentLines = append(nonCommentLines, line)
+			bodyLines = append(bodyLines, line)
 		}
 	}
 
-	// 題名と本文を分離
-	fullContent := strings.Join(nonCommentLines, "\n")
-
-	// "Title:" を探す
-	titlePrefix := "Title:"
-	titleIndex := strings.Index(fullContent, titlePrefix)
-	if titleIndex == -1 {
-		return nil, fmt.Errorf("題名が見つかりませんでした。'Title:' の形式で記載してください")
-	}
-
-	// "---" の区切り線を探す
-	separatorIndex := strings.Index(fullContent, "---")
-	if separatorIndex == -1 {
-		return nil, fmt.Errorf("区切り線 '---' が見つかりませんでした")
-	}
-
-	// 題名を抽出
-	titleStart := titleIndex + len(titlePrefix)
-	titleText := strings.TrimSpace(fullContent[titleStart:separatorIndex])
-
-	// 本文を抽出
-	bodyText := strings.TrimSpace(fullContent[separatorIndex+3:])
-
-	return &IssueContent{
-		Title: titleText,
-		Body:  bodyText,
-	}, nil
+	return strings.TrimSpace(strings.Join(bodyLines, "\n")), nil
 }
 
-// updateIssue は指定されたissueの題名と本文を更新します。
-func updateIssue(issueNumber int, newTitle, newBody string) error {
-	cmd := exec.Command("gh", "issue", "edit", strconv.Itoa(issueNumber), "--title", newTitle, "--body", newBody)
+// updateIssueBody は指定されたissueの本文を更新します。
+func updateIssueBody(issueNumber int, newBody string) error {
+	cmd := exec.Command("gh", "issue", "edit", strconv.Itoa(issueNumber), "--body", newBody)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
