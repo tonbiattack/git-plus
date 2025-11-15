@@ -1,5 +1,5 @@
 /*
-Package cmd は git-plus の各種コマンドを定義します。
+Package cmd は git の拡張コマンド各種コマンドを定義します。
 
 このファイル (tag_diff.go) は、2つのタグ間の差分を取得するコマンドを提供します。
 指定された2つのタグ間のコミット差分をファイルに出力します。
@@ -11,7 +11,7 @@ Package cmd は git-plus の各種コマンドを定義します。
   - コミット数の集計
 
 使用例:
-  git-plus tag-diff V4.2.00.00 V4.3.00.00  # 2つのタグ間の差分を取得
+  git tag-diff V4.2.00.00 V4.3.00.00  # 2つのタグ間の差分を取得
 */
 package cmd
 
@@ -33,7 +33,7 @@ var tagDiffCmd = &cobra.Command{
 	Long: `2つのタグ間のコミット差分を取得し、ファイルに出力します。
 Mergeコミットは自動的に除外されます。
 出力形式: - コミットメッセージ (作成者名, 日付)`,
-	Example: `  git-plus tag-diff V4.2.00.00 V4.3.00.00`,
+	Example: `  git tag-diff V4.2.00.00 V4.3.00.00`,
 	Args:    cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		oldTag := args[0]

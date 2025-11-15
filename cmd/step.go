@@ -1,7 +1,7 @@
 // ================================================================================
 // step.go
 // ================================================================================
-// このファイルは git-plus の step コマンドを実装しています。
+// このファイルは git の拡張コマンド step コマンドを実装しています。
 //
 // 【概要】
 // step コマンドは、リポジトリの総ステップ数（行数）とユーザーごとの貢献度を
@@ -17,11 +17,11 @@
 // - 統計結果のテキストファイルとCSVファイルへの自動保存
 //
 // 【使用例】
-//   git-plus step                    # 全期間のステップ数を表示
-//   git-plus step -w 1               # 過去1週間
-//   git-plus step -m 3               # 過去3ヶ月
-//   git-plus step --since 2024-01-01 # 指定日以降
-//   git-plus step --include-initial  # 初回コミットを含める
+//   git step                    # 全期間のステップ数を表示
+//   git step -w 1               # 過去1週間
+//   git step -m 3               # 過去3ヶ月
+//   git step --since 2024-01-01 # 指定日以降
+//   git step --include-initial  # 初回コミットを含める
 //
 // 【出力ファイル】
 // - git_step_<期間>_<日付>.txt: 人間が読みやすいテキスト形式
@@ -72,12 +72,12 @@ var stepCmd = &cobra.Command{
 	Long: `リポジトリ全体のステップ数（行数）とユーザーごとの貢献度を集計します。
 デフォルトで初回コミットは除外されます（大量の行数が追加されることが多いため）。
 結果はステップ数が多い順に表示され、自動的にテキストファイルとCSVファイルに保存されます。`,
-	Example: `  git-plus step                    # 全期間のステップ数を表示
-  git-plus step -w 1               # 過去1週間
-  git-plus step -m 1               # 過去1ヶ月
-  git-plus step -y 1               # 過去1年
-  git-plus step --since 2024-01-01 # 指定日以降
-  git-plus step --include-initial  # 初回コミットを含める`,
+	Example: `  git step                    # 全期間のステップ数を表示
+  git step -w 1               # 過去1週間
+  git step -m 1               # 過去1ヶ月
+  git step -y 1               # 過去1年
+  git step --since 2024-01-01 # 指定日以降
+  git step --include-initial  # 初回コミットを含める`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// 期間指定の優先順位: -w/-m/-y > --since
 		sinceArg := stepSince
@@ -735,6 +735,6 @@ func init() {
 	stepCmd.Flags().IntVarP(&stepWeeks, "weeks", "w", 0, "過去N週間を集計")
 	stepCmd.Flags().IntVarP(&stepMonths, "months", "m", 0, "過去Nヶ月を集計")
 	stepCmd.Flags().IntVarP(&stepYears, "years", "y", 0, "過去N年を集計")
-	stepCmd.Flags().BoolVar(&stepIncludeInitial, "include-initial", false, "初回コミットを含める")
+	stepCmd.Flags().BoolVarP(&stepIncludeInitial, "include-initial", "i", false, "初回コミットを含める")
 	rootCmd.AddCommand(stepCmd)
 }

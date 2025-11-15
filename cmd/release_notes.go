@@ -1,7 +1,7 @@
 // ================================================================================
 // release_notes.go
 // ================================================================================
-// このファイルは git-plus の release-notes コマンドを実装しています。
+// このファイルは git の拡張コマンド release-notes コマンドを実装しています。
 //
 // 【概要】
 // release-notes コマンドは、既存のタグからGitHubのリリースノートを自動生成します。
@@ -15,11 +15,11 @@
 // - 最新タグまたは指定タグからの作成
 //
 // 【使用例】
-//   git-plus release-notes                  # 対話的にタグを選択
-//   git-plus release-notes --tag v1.2.3     # 指定したタグからリリース作成
-//   git-plus release-notes --latest         # 最新タグからリリース作成
-//   git-plus release-notes --draft          # ドラフトとして作成
-//   git-plus release-notes --prerelease     # プレリリースとして作成
+//   git release-notes                  # 対話的にタグを選択
+//   git release-notes --tag v1.2.3     # 指定したタグからリリース作成
+//   git release-notes --latest         # 最新タグからリリース作成
+//   git release-notes --draft          # ドラフトとして作成
+//   git release-notes --prerelease     # プレリリースとして作成
 //
 // 【必要な外部ツール】
 // - GitHub CLI (gh): https://cli.github.com/
@@ -56,12 +56,12 @@ GitHub CLIのgh release createコマンドを使用して、タグ間の変更�
 
 注意: このコマンドは既存のタグに対してリリースを作成します。
       新しいタグを作成する場合は、事前に git new-tag コマンドを使用してください。`,
-	Example: `  git-plus release-notes                  # 対話的にタグを選択
-  git-plus release-notes --tag v1.2.3     # 指定したタグからリリース作成
-  git-plus release-notes --latest         # 最新タグからリリース作成
-  git-plus release-notes --draft          # ドラフトとして作成
-  git-plus release-notes --prerelease     # プレリリースとして作成
-  git-plus release-notes --tag v1.2.3 --draft --prerelease`,
+	Example: `  git release-notes                  # 対話的にタグを選択
+  git release-notes --tag v1.2.3     # 指定したタグからリリース作成
+  git release-notes --latest         # 最新タグからリリース作成
+  git release-notes --draft          # ドラフトとして作成
+  git release-notes --prerelease     # プレリリースとして作成
+  git release-notes --tag v1.2.3 --draft --prerelease`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// GitHub CLI の確認
 		if !checkGitHubCLIInstalled() {
@@ -240,9 +240,9 @@ func createReleaseNotes(tag string, draft, prerelease bool) error {
 
 // init は release-notes コマンドを root コマンドに登録し、フラグを設定します。
 func init() {
-	releaseNotesCmd.Flags().StringVar(&releaseTag, "tag", "", "リリースを作成するタグを指定")
-	releaseNotesCmd.Flags().BoolVar(&releaseDraft, "draft", false, "ドラフトとして作成")
-	releaseNotesCmd.Flags().BoolVar(&releasePrerelease, "prerelease", false, "プレリリースとして作成")
-	releaseNotesCmd.Flags().BoolVar(&releaseLatest, "latest", false, "最新タグからリリースを作成")
+	releaseNotesCmd.Flags().StringVarP(&releaseTag, "tag", "t", "", "リリースを作成するタグを指定")
+	releaseNotesCmd.Flags().BoolVarP(&releaseDraft, "draft", "d", false, "ドラフトとして作成")
+	releaseNotesCmd.Flags().BoolVarP(&releasePrerelease, "prerelease", "p", false, "プレリリースとして作成")
+	releaseNotesCmd.Flags().BoolVarP(&releaseLatest, "latest", "l", false, "最新タグからリリースを作成")
 	rootCmd.AddCommand(releaseNotesCmd)
 }

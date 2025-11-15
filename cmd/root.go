@@ -27,18 +27,20 @@ import (
 // 各ファイルのinit()関数でこのrootCmdに登録されます。
 //
 // Cobraのコマンド構造:
-// rootCmd (git-plus)
+// rootCmd (git plus)
 //   ├── newbranch
 //   ├── amend
 //   ├── squash
 //   └── ...（その他のサブコマンド）
 var rootCmd = &cobra.Command{
-	Use:   "git-plus",
-	Short: "Git の日常操作を少しだけ楽にするためのカスタムコマンド集",
-	Long: `git-plus は Git の日常操作をより簡単にするためのカスタムコマンド集です。
+	Use:   "plus",
+	Short: "Git の日常操作を少しだけ楽にするための拡張コマンド集",
+	Long: `git plus は Git の日常操作をより簡単にするための拡張コマンド集です。
 
-ブランチ管理、コミット操作、PR管理、統計分析など、
-様々な便利な機能を提供します。`,
+git のサブコマンドとして動作し、ブランチ管理、コミット操作、
+PR管理、統計分析など、様々な便利な機能を提供します。
+
+使用方法: git plus <サブコマンド>`,
 }
 
 // Execute は、Cobraのルートコマンドを実行します。

@@ -1,7 +1,7 @@
 // ================================================================================
 // repo_others.go
 // ================================================================================
-// このファイルは git-plus の repo-others コマンドを実装しています。
+// このファイルは git の拡張コマンド repo-others コマンドを実装しています。
 //
 // 【概要】
 // repo-others コマンドは、ローカルにクローン済みの他人のGitHubリポジトリを
@@ -15,9 +15,9 @@
 // - 番号選択でブラウザで開く
 //
 // 【使用例】
-//   git-plus repo-others              # 現在のディレクトリ配下を検索
-//   git-plus repo-others --path ~/dev # 指定ディレクトリを検索
-//   git-plus repo-others --all        # 自分のリポジトリも含める
+//   git repo-others              # 現在のディレクトリ配下を検索
+//   git repo-others --path ~/dev # 指定ディレクトリを検索
+//   git repo-others --all        # 自分のリポジトリも含める
 //
 // 【必要な外部ツール】
 // - GitHub CLI (gh): https://cli.github.com/
@@ -62,9 +62,9 @@ var repoOthersCmd = &cobra.Command{
 
 自分のリポジトリは除外されますが、フォークしたリポジトリは含まれます。
 リポジトリは最終コミット日時の降順（最新順）で表示されます。`,
-	Example: `  git-plus repo-others              # 現在のディレクトリ配下を検索
-  git-plus repo-others --path ~/dev # 指定ディレクトリを検索
-  git-plus repo-others --all        # 自分のリポジトリも含める`,
+	Example: `  git repo-others              # 現在のディレクトリ配下を検索
+  git repo-others --path ~/dev # 指定ディレクトリを検索
+  git repo-others --all        # 自分のリポジトリも含める`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// GitHub CLI の確認
 		if !checkGitHubCLIInstalled() {
@@ -433,6 +433,6 @@ func openRepoInBrowser(repo RepoInfo) error {
 // init は repo-others コマンドを root コマンドに登録します。
 func init() {
 	rootCmd.AddCommand(repoOthersCmd)
-	repoOthersCmd.Flags().StringVar(&repoOthersPath, "path", "", "検索するディレクトリ（デフォルト: カレントディレクトリ）")
-	repoOthersCmd.Flags().BoolVar(&repoOthersAll, "all", false, "自分のリポジトリも含めてすべて表示")
+	repoOthersCmd.Flags().StringVarP(&repoOthersPath, "path", "p", "", "検索するディレクトリ（デフォルト: カレントディレクトリ）")
+	repoOthersCmd.Flags().BoolVarP(&repoOthersAll, "all", "a", false, "自分のリポジトリも含めてすべて表示")
 }

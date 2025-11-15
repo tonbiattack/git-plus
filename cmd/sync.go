@@ -1,7 +1,7 @@
 // ================================================================================
 // sync.go
 // ================================================================================
-// このファイルは git-plus の sync コマンドを実装しています。
+// このファイルは git の拡張コマンド sync コマンドを実装しています。
 //
 // 【概要】
 // sync コマンドは、現在のブランチを最新のリモートブランチと同期する機能を提供します。
@@ -16,10 +16,10 @@
 //   - --abort: リベースを中止して元の状態に戻す
 //
 // 【使用例】
-//   git-plus sync                  # origin/main または origin/master と同期
-//   git-plus sync develop          # origin/develop と同期
-//   git-plus sync --continue       # コンフリクト解決後に続行
-//   git-plus sync --abort          # 同期を中止
+//   git sync                  # origin/main または origin/master と同期
+//   git sync develop          # origin/develop と同期
+//   git sync --continue       # コンフリクト解決後に続行
+//   git sync --abort          # 同期を中止
 // ================================================================================
 
 package cmd
@@ -44,10 +44,10 @@ var syncCmd = &cobra.Command{
 	Short: "現在のブランチを最新のリモートブランチと同期",
 	Long: `現在のブランチを最新の origin/<ブランチ> と同期します。
 内部的に git rebase を使用するため、履歴がきれいに保たれます。`,
-	Example: `  git-plus sync                  # origin/main (または origin/master) と同期
-  git-plus sync develop          # origin/develop と同期
-  git-plus sync --continue       # コンフリクト解決後に続行
-  git-plus sync --abort          # 同期を中止`,
+	Example: `  git sync                  # origin/main (または origin/master) と同期
+  git sync develop          # origin/develop と同期
+  git sync --continue       # コンフリクト解決後に続行
+  git sync --abort          # 同期を中止`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// --continue オプションの処理
 		if syncContinue {
@@ -92,8 +92,8 @@ var syncCmd = &cobra.Command{
 			if checkRebaseInProgress() {
 				fmt.Println("\nコンフリクトが発生しました。")
 				fmt.Println("コンフリクトを解決した後、以下のコマンドを実行してください:")
-				fmt.Println("  git-plus sync --continue    # 同期を続行")
-				fmt.Println("  git-plus sync --abort       # 同期を中止")
+				fmt.Println("  git sync --continue    # 同期を続行")
+				fmt.Println("  git sync --abort       # 同期を中止")
 				return fmt.Errorf("コンフリクトが発生しました")
 			}
 			return fmt.Errorf("rebase に失敗しました: %w", err)
@@ -177,7 +177,7 @@ func abortRebaseOp() error {
 //   --continue: コンフリクト解決後に rebase を続行
 //   --abort: 同期を中止して元の状態に戻す
 func init() {
-	syncCmd.Flags().BoolVar(&syncContinue, "continue", false, "コンフリクト解決後に rebase を続行")
-	syncCmd.Flags().BoolVar(&syncAbort, "abort", false, "同期を中止して元の状態に戻す")
+	syncCmd.Flags().BoolVarP(&syncContinue, "continue", "c", false, "コンフリクト解決後に rebase を続行")
+	syncCmd.Flags().BoolVarP(&syncAbort, "abort", "a", false, "同期を中止して元の状態に戻す")
 	rootCmd.AddCommand(syncCmd)
 }

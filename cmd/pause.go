@@ -1,7 +1,7 @@
 // ================================================================================
 // pause.go
 // ================================================================================
-// このファイルは git-plus の pause コマンドを実装しています。
+// このファイルは git の拡張コマンド pause コマンドを実装しています。
 //
 // 【概要】
 // pause コマンドは、現在のブランチでの作業を一時停止し、別のブランチに切り替える
@@ -15,8 +15,8 @@
 // - 既存の pause 状態の検出と上書き確認
 //
 // 【使用例】
-//   git-plus pause main              # main ブランチに一時切り替え
-//   git-plus pause feature/login     # feature/login ブランチに一時切り替え
+//   git pause main              # main ブランチに一時切り替え
+//   git pause feature/login     # feature/login ブランチに一時切り替え
 //
 // 【内部仕様】
 // - 状態は $HOME/.config/git-plus/pause-state.json に保存されます
@@ -45,8 +45,8 @@ var pauseCmd = &cobra.Command{
 	Short: "作業中の変更を stash して別ブランチへ移動します",
 	Long: `現在のブランチ名とコミットしていない変更を保存し、指定したブランチへ切り替えます。
 作業へ戻る準備ができたら git resume を実行して保存内容を復元してください。`,
-	Example: `  git-plus pause main
-  git-plus pause feature/login`,
+	Example: `  git pause main
+  git pause feature/login`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		targetBranch := args[0]
@@ -119,7 +119,7 @@ var pauseCmd = &cobra.Command{
 		}
 
 		fmt.Printf("✓ %s に切り替えました\n", targetBranch)
-		fmt.Println("\n元のブランチに戻るには: git-plus resume")
+		fmt.Println("\n元のブランチに戻るには: git resume")
 		return nil
 	},
 }

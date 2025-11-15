@@ -1,5 +1,5 @@
 /*
-Package cmd は git-plus の各種コマンドを定義します。
+Package cmd は git の拡張コマンド各種コマンドを定義します。
 
 このファイル (clone_org.go) は、GitHub 組織のリポジトリを一括クローンするコマンドを提供します。
 GitHub CLI (gh) を使用して、指定された組織のすべてのリポジトリを取得し、
@@ -14,10 +14,10 @@ GitHub CLI (gh) を使用して、指定された組織のすべてのリポジ�
   - すでに存在するリポジトリのスキップ
 
 使用例:
-  git-plus clone-org myorg                    # myorg 組織の全リポジトリをクローン
-  git-plus clone-org myorg --limit 5          # 最新5個のリポジトリのみをクローン
-  git-plus clone-org myorg --archived         # アーカイブも含める
-  git-plus clone-org myorg --shallow          # shallow クローンを使用
+  git clone-org myorg                    # myorg 組織の全リポジトリをクローン
+  git clone-org myorg --limit 5          # 最新5個のリポジトリのみをクローン
+  git clone-org myorg --archived         # アーカイブも含める
+  git clone-org myorg --shallow          # shallow クローンを使用
 */
 package cmd
 
@@ -62,12 +62,12 @@ var cloneOrgCmd = &cobra.Command{
 リポジトリは最終更新日時（pushedAt）でソートされ、最新順にクローンされます。
 すでに同じフォルダに同じ名前のリポジトリがある場合はスキップします。
 リポジトリは組織名のディレクトリ配下にクローンされます。`,
-	Example: `  git-plus clone-org myorg                    # myorg 組織の全リポジトリをクローン
-  git-plus clone-org myorg --limit 5          # 最新5個のリポジトリのみをクローン
-  git-plus clone-org myorg -n 10              # 最新10個のリポジトリのみをクローン
-  git-plus clone-org myorg --archived         # アーカイブも含める
-  git-plus clone-org myorg --shallow          # shallow クローンを使用
-  git-plus clone-org myorg --limit 3 --shallow  # 最新3個をshallowクローン`,
+	Example: `  git clone-org myorg                    # myorg 組織の全リポジトリをクローン
+  git clone-org myorg --limit 5          # 最新5個のリポジトリのみをクローン
+  git clone-org myorg -n 10              # 最新10個のリポジトリのみをクローン
+  git clone-org myorg --archived         # アーカイブも含める
+  git clone-org myorg --shallow          # shallow クローンを使用
+  git clone-org myorg --limit 3 --shallow  # 最新3個をshallowクローン`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		org := args[0]
@@ -122,7 +122,7 @@ var cloneOrgCmd = &cobra.Command{
 			fmt.Printf("\n⚠️  警告: %d個のリポジトリをクローンします。\n", len(filteredRepos))
 			fmt.Println("   多数のリポジトリをクローンする場合は時間がかかります。")
 			fmt.Printf("   最新のリポジトリのみが必要な場合は --limit オプションを検討してください。\n")
-			fmt.Printf("   例: git-plus clone-org %s --limit 10\n", org)
+			fmt.Printf("   例: git clone-org %s --limit 10\n", org)
 		}
 
 		// 確認プロンプト
@@ -280,8 +280,8 @@ func cloneRepos(repos []Repository, baseDir string, shallow bool) (int, int) {
 // init はコマンドの初期化を行います。
 // フラグの定義と cloneOrgCmd を rootCmd に登録します。
 func init() {
-	cloneOrgCmd.Flags().BoolVar(&cloneOrgArchived, "archived", false, "アーカイブされたリポジトリも含める")
-	cloneOrgCmd.Flags().BoolVar(&cloneOrgShallow, "shallow", false, "shallow クローンを使用（--depth=1）")
+	cloneOrgCmd.Flags().BoolVarP(&cloneOrgArchived, "archived", "a", false, "アーカイブされたリポジトリも含める")
+	cloneOrgCmd.Flags().BoolVarP(&cloneOrgShallow, "shallow", "s", false, "shallow クローンを使用（--depth=1）")
 	cloneOrgCmd.Flags().IntVarP(&cloneOrgLimit, "limit", "n", 0, "最新N個のリポジトリのみをクローン")
 	rootCmd.AddCommand(cloneOrgCmd)
 }

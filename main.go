@@ -7,13 +7,13 @@
 // 仕組み:
 // - 実行ファイル名が "git-xxx" の場合、"xxx" をサブコマンドとして扱います
 // - これにより、同一バイナリから複数のコマンドを実行できます
-// - Linux/macOS: シンボリックリンクを使用 (git-newbranch → git-plus)
+// - Linux/macOS: シンボリックリンクを使用 (git-newbranch → メインバイナリ)
 // - Windows: 実行ファイルのコピーを使用 (git-newbranch.exe)
 //
 // 例:
-// - git-newbranch を実行 → "newbranch" サブコマンドが実行される
-// - git-amend を実行 → "amend" サブコマンドが実行される
-// - git-plus newbranch を直接実行することも可能
+// - git-newbranch を実行 → "newbranch" サブコマンドが実行される (git newbranch として実行)
+// - git-amend を実行 → "amend" サブコマンドが実行される (git amend として実行)
+// - git plus newbranch として直接実行することも可能
 // ================================================================================
 package main
 

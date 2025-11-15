@@ -1,5 +1,5 @@
 /*
-Package cmd は git-plus の各種コマンドを定義します。
+Package cmd は git の拡張コマンド各種コマンドを定義します。
 
 このファイル (undo_last_commit.go) は、直前のコミットを取り消すコマンドを提供します。
 git reset --soft HEAD^ のショートカットとして機能し、
@@ -11,7 +11,7 @@ git reset --soft HEAD^ のショートカットとして機能し、
   - コミットメッセージの修正に便利
 
 使用例:
-  git-plus undo-last-commit  # 直前のコミットを取り消す
+  git undo-last-commit  # 直前のコミットを取り消す
 */
 package cmd
 

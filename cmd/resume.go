@@ -1,7 +1,7 @@
 // ================================================================================
 // resume.go
 // ================================================================================
-// このファイルは git-plus の resume コマンドを実装しています。
+// このファイルは git の拡張コマンド resume コマンドを実装しています。
 //
 // 【概要】
 // resume コマンドは、pause コマンドで一時停止した作業を再開する機能を提供します。
@@ -14,7 +14,7 @@
 // - 復元後の状態ファイルの自動削除
 //
 // 【使用例】
-//   git-plus resume  # pause で保存した状態を復元
+//   git resume  # pause で保存した状態を復元
 //
 // 【内部仕様】
 // - 状態ファイルは $HOME/.config/git-plus/pause-state.json から読み込まれます
@@ -40,7 +40,7 @@ var resumeCmd = &cobra.Command{
 	Short: "git pause で保存した作業を再開します",
 	Long: `git pause が記録したブランチへ戻り、必要であれば保存された stash を適用して、
 休止状態のメタデータを削除します。`,
-	Example: `  git-plus resume`,
+	Example: `  git resume`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// 状態ファイルが存在するかチェック
 		exists, err := pausestate.Exists()

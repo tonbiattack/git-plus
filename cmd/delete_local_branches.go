@@ -1,5 +1,5 @@
 /*
-Package cmd は git-plus の各種コマンドを定義します。
+Package cmd は git の拡張コマンド各種コマンドを定義します。
 
 このファイル (delete_local_branches.go) は、マージ済みのローカルブランチを
 一括削除するコマンドを提供します。
@@ -11,7 +11,7 @@ Package cmd は git-plus の各種コマンドを定義します。
   - 削除前の確認プロンプト
 
 使用例:
-  git-plus delete-local-branches  # マージ済みのブランチを削除
+  git delete-local-branches  # マージ済みのブランチを削除
 */
 package cmd
 

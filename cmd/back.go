@@ -1,5 +1,5 @@
 /*
-Package cmd は git-plus の各種コマンドを定義します。
+Package cmd は git の拡張コマンド各種コマンドを定義します。
 
 このファイル (back.go) は、前のブランチやタグに戻るコマンドを提供します。
 git checkout - のショートカットとして機能し、
@@ -11,7 +11,7 @@ git checkout - のショートカットとして機能し、
   - 作業ブランチとメインブランチの往復、タグの確認などに便利
 
 使用例:
-  git-plus back  # 前のブランチ/タグに戻る
+  git back  # 前のブランチ/タグに戻る
 */
 package cmd
 
@@ -35,8 +35,8 @@ var backCmd = &cobra.Command{
 注意:
   - 少なくとも一度はブランチやタグを切り替えている必要があります
   - 最初のチェックアウトでは使用できません`,
-	Example: `  git-plus back  # 前のブランチ/タグに戻る
-  git back       # git-plus へのエイリアスがあれば使用可能`,
+	Example: `  git back  # 前のブランチ/タグに戻る
+  git back       # git へのエイリアスがあれば使用可能`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// git checkout - を実行して前のブランチ/タグに切り替え
 		// "-" は直前にチェックアウトしていたブランチ/タグを示す特殊な記号

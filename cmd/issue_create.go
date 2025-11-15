@@ -1,7 +1,7 @@
 // ================================================================================
 // issue_create.go
 // ================================================================================
-// このファイルは git-plus の issue-create コマンドを実装しています。
+// このファイルは git の拡張コマンド issue-create コマンドを実装しています。
 //
 // 【概要】
 // issue-create コマンドは、GitHubに新しいissueを作成する機能を提供します。
@@ -11,7 +11,7 @@
 // - GitHubへの新しいissue作成
 //
 // 【使用例】
-//   git-plus issue-create          # エディタでissueの題名と本文を入力して作成
+//   git issue-create          # エディタでissueの題名と本文を入力して作成
 //
 // 【内部仕様】
 // - GitHub CLI (gh) の gh issue create を使用
@@ -42,7 +42,7 @@ var issueCreateCmd = &cobra.Command{
 ユーザーが設定しているエディタ（VSCode等）で題名と本文を編集できます。
 
 内部的に GitHub CLI (gh) を使用してissueを作成します。`,
-	Example: `  git-plus issue-create          # エディタでissueを作成`,
+	Example: `  git issue-create          # エディタでissueを作成`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// GitHub CLI の確認
 		if !checkGitHubCLIInstalled() {

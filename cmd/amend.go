@@ -1,5 +1,5 @@
 /*
-Package cmd は git-plus の各種コマンドを定義します。
+Package cmd は git の拡張コマンド各種コマンドを定義します。
 
 このファイル (amend.go) は、git commit --amend のショートカットコマンドを提供します。
 直前のコミットを修正したい場合に便利なコマンドです。
@@ -10,9 +10,9 @@ Package cmd は git-plus の各種コマンドを定義します。
   - エラーハンドリングとユーザーフレンドリーなメッセージ表示
 
 使用例:
-  git-plus amend                # エディタを開いて直前のコミットを修正
-  git-plus amend --no-edit      # コミットメッセージを変更せずに修正
-  git-plus amend --reset-author # 作成者情報をリセット
+  git amend                # エディタを開いて直前のコミットを修正
+  git amend --no-edit      # コミットメッセージを変更せずに修正
+  git amend --reset-author # 作成者情報をリセット
 */
 package cmd
 
@@ -32,9 +32,9 @@ var amendCmd = &cobra.Command{
 	Short: "直前のコミットを修正",
 	Long: `git commit --amend のショートカットです。
 直前のコミットを修正します。引数はそのまま git commit --amend に渡されます。`,
-	Example: `  git-plus amend                # 直前のコミットを修正（エディタを開く）
-  git-plus amend --no-edit      # コミットメッセージを変更せずに修正
-  git-plus amend --reset-author # 作成者情報をリセット`,
+	Example: `  git amend                # 直前のコミットを修正（エディタを開く）
+  git amend --no-edit      # コミットメッセージを変更せずに修正
+  git amend --reset-author # 作成者情報をリセット`,
 	DisableFlagParsing: true, // git commit --amend のフラグをそのまま渡すため
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// git commit --amend に渡す引数を構築

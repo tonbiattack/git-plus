@@ -1,5 +1,5 @@
 /*
-Package cmd は git-plus の各種コマンドを定義します。
+Package cmd は git の拡張コマンド各種コマンドを定義します。
 
 このファイル (browse.go) は、リポジトリをブラウザで開くコマンドを提供します。
 GitHub CLI (gh) を使用して、現在のリポジトリをウェブブラウザで開きます。
@@ -15,7 +15,7 @@ GitHub CLI (gh) を使用して、現在のリポジトリをウェブブラウ�
   - リポジトリが GitHub でホストされていること
 
 使用例:
-  git-plus browse  # 現在のリポジトリをブラウザで開く
+  git browse  # 現在のリポジトリをブラウザで開く
 */
 package cmd
 

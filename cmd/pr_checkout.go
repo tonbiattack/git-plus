@@ -1,7 +1,7 @@
 // ================================================================================
 // pr_checkout.go
 // ================================================================================
-// このファイルは git-plus の pr-checkout コマンドを実装しています。
+// このファイルは git の拡張コマンド pr-checkout コマンドを実装しています。
 //
 // 【概要】
 // pr-checkout コマンドは、最新または指定されたプルリクエストのブランチを
@@ -15,8 +15,8 @@
 // - 既存の pause 状態の検出と上書き確認
 //
 // 【使用例】
-//   git-plus pr-checkout          # 最新のPRをチェックアウト
-//   git-plus pr-checkout 123      # PR #123 をチェックアウト
+//   git pr-checkout          # 最新のPRをチェックアウト
+//   git pr-checkout 123      # PR #123 をチェックアウト
 //
 // 【内部仕様】
 // - GitHub CLI (gh) の gh pr checkout コマンドを使用
@@ -53,8 +53,8 @@ var prCheckoutCmd = &cobra.Command{
 PR番号を指定すると、その番号のPRをチェックアウトします。
 
 内部的に GitHub CLI (gh) を使用してプルリクエストと連携します。`,
-	Example: `  git-plus pr-checkout          # 最新のPRをチェックアウト
-  git-plus pr-checkout 123      # PR #123 をチェックアウト`,
+	Example: `  git pr-checkout          # 最新のPRをチェックアウト
+  git pr-checkout 123      # PR #123 をチェックアウト`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// GitHub CLI の確認
 		if !checkGitHubCLI() {
@@ -156,7 +156,7 @@ PR番号を指定すると、その番号のPRをチェックアウトします�
 		}
 
 		fmt.Printf("✓ PR #%s のブランチ '%s' にチェックアウトしました\n", prNumber, targetBranch)
-		fmt.Println("\n元のブランチに戻るには: git-plus resume")
+		fmt.Println("\n元のブランチに戻るには: git resume")
 		return nil
 	},
 }

@@ -1,7 +1,7 @@
 // ================================================================================
 // pr_create_merge.go
 // ================================================================================
-// このファイルは git-plus の pr-create-merge コマンドを実装しています。
+// このファイルは git の拡張コマンド pr-create-merge コマンドを実装しています。
 //
 // 【概要】
 // pr-create-merge コマンドは、PRの作成からマージ、ブランチ削除、ベースブランチへの
@@ -16,9 +16,9 @@
 // - 各ステップの進行状況表示
 //
 // 【使用例】
-//   git-plus pr-create-merge              # 対話的にベースブランチを入力
-//   git-plus pr-create-merge main         # main ブランチへマージ
-//   git-plus pr-create-merge develop      # develop ブランチへマージ
+//   git pr-create-merge              # 対話的にベースブランチを入力
+//   git pr-create-merge main         # main ブランチへマージ
+//   git pr-create-merge develop      # develop ブランチへマージ
 //
 // 【必要な外部ツール】
 // - GitHub CLI (gh): https://cli.github.com/
@@ -47,9 +47,9 @@ var prCreateMergeCmd = &cobra.Command{
   2. PRをマージしてブランチを削除（--merge --delete-branch）
   3. ベースブランチに切り替え（git switch）
   4. 最新の変更を取得（git pull）`,
-	Example: `  git-plus pr-create-merge              # 対話的にベースブランチを入力
-  git-plus pr-create-merge main         # mainブランチへマージ
-  git-plus pr-create-merge develop      # developブランチへマージ`,
+	Example: `  git pr-create-merge              # 対話的にベースブランチを入力
+  git pr-create-merge main         # mainブランチへマージ
+  git pr-create-merge develop      # developブランチへマージ`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// 現在のブランチを取得
 		currentBranch, err := getCurrentBranchForPR()

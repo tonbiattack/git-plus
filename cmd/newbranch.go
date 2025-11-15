@@ -1,7 +1,7 @@
 // ================================================================================
 // newbranch.go
 // ================================================================================
-// このファイルは git-plus の newbranch コマンドを実装しています。
+// このファイルは git の拡張コマンド newbranch コマンドを実装しています。
 //
 // 【概要】
 // newbranch コマンドは、新しいブランチを作成するか、既存のブランチを再作成するための
@@ -15,8 +15,8 @@
 // - 対話的なユーザー確認プロンプト
 //
 // 【使用例】
-//   git-plus newbranch feature/awesome  # 新しいブランチを作成
-//   git-plus newbranch main             # 既存ブランチの場合は選択肢を表示
+//   git newbranch feature/awesome  # 新しいブランチを作成
+//   git newbranch main             # 既存ブランチの場合は選択肢を表示
 // ================================================================================
 
 package cmd
@@ -43,7 +43,7 @@ var newbranchCmd = &cobra.Command{
   [r]ecreate - ブランチを削除して作り直す
   [s]witch   - 既存のブランチに切り替える
   [c]ancel   - 処理を中止する`,
-	Example: `  git-plus newbranch feature/awesome`,
+	Example: `  git newbranch feature/awesome`,
 	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		branch := args[0]

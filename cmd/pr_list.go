@@ -1,7 +1,7 @@
 // ================================================================================
 // pr_list.go
 // ================================================================================
-// このファイルは git-plus の pr-list コマンドを実装しています。
+// このファイルは git の拡張コマンド pr-list コマンドを実装しています。
 //
 // 【概要】
 // pr-list コマンドは、GitHub CLI の `gh pr list` をラップして、
@@ -13,10 +13,10 @@
 // - シェル補完機能の有効化
 //
 // 【使用例】
-//   git-plus pr-list                    # PR一覧を表示
-//   git-plus pr-list --state open       # オープンなPRのみ表示
-//   git-plus pr-list --author @me       # 自分が作成したPRを表示
-//   git-plus pr-list --assignee @me     # 自分にアサインされたPRを表示
+//   git pr-list                    # PR一覧を表示
+//   git pr-list --state open       # オープンなPRのみ表示
+//   git pr-list --author @me       # 自分が作成したPRを表示
+//   git pr-list --assignee @me     # 自分にアサインされたPRを表示
 //
 // 【内部仕様】
 // - GitHub CLI (gh) の gh pr list コマンドをそのままラップ
@@ -57,15 +57,15 @@ var prListCmd = &cobra.Command{
   --web                  ブラウザで開く
 
 内部的に GitHub CLI (gh) を使用してプルリクエストの一覧を取得します。`,
-	Example: `  git-plus pr-list                      # PR一覧を表示
-  git-plus pr-list --state open         # オープンなPRのみ表示
-  git-plus pr-list --state closed       # クローズされたPRのみ表示
-  git-plus pr-list --state merged       # マージされたPRのみ表示
-  git-plus pr-list --author @me         # 自分が作成したPRを表示
-  git-plus pr-list --assignee @me       # 自分にアサインされたPRを表示
-  git-plus pr-list --limit 10           # 最新10件のPRを表示
-  git-plus pr-list --label bug          # "bug" ラベルが付いたPRを表示
-  git-plus pr-list --base main          # mainブランチへのPRを表示`,
+	Example: `  git pr-list                      # PR一覧を表示
+  git pr-list --state open         # オープンなPRのみ表示
+  git pr-list --state closed       # クローズされたPRのみ表示
+  git pr-list --state merged       # マージされたPRのみ表示
+  git pr-list --author @me         # 自分が作成したPRを表示
+  git pr-list --assignee @me       # 自分にアサインされたPRを表示
+  git pr-list --limit 10           # 最新10件のPRを表示
+  git pr-list --label bug          # "bug" ラベルが付いたPRを表示
+  git pr-list --base main          # mainブランチへのPRを表示`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// GitHub CLI の確認
 		if !checkGitHubCLI() {

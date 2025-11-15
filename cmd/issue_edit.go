@@ -1,7 +1,7 @@
 // ================================================================================
 // issue_edit.go
 // ================================================================================
-// このファイルは git-plus の issue-edit コマンドを実装しています。
+// このファイルは git の拡張コマンド issue-edit コマンドを実装しています。
 //
 // 【概要】
 // issue-edit コマンドは、GitHubのopenしているissueの一覧を表示し、
@@ -17,10 +17,10 @@
 // - -c/--close オプションでコメント入力後にissueをクローズ
 //
 // 【使用例】
-//   git-plus issue-edit              # issueの一覧を表示して選択・編集
-//   git-plus issue-edit -v           # issueの一覧を表示して選択・閲覧のみ
-//   git-plus issue-edit -m           # コメントを追加（クローズしない）
-//   git-plus issue-edit -c           # コメント入力後にissueをクローズ
+//   git issue-edit              # issueの一覧を表示して選択・編集
+//   git issue-edit -v           # issueの一覧を表示して選択・閲覧のみ
+//   git issue-edit -m           # コメントを追加（クローズしない）
+//   git issue-edit -c           # コメント入力後にissueをクローズ
 //
 // 【内部仕様】
 // - GitHub CLI (gh) の gh issue list / gh issue edit を使用
@@ -76,10 +76,10 @@ var issueEditCmd = &cobra.Command{
 -c/--close オプションを使用すると、コメント入力後にissueをクローズできます。
 
 内部的に GitHub CLI (gh) を使用してissueと連携します。`,
-	Example: `  git-plus issue-edit              # issueの一覧を表示して選択・編集
-  git-plus issue-edit -v           # issueの一覧を表示して選択・閲覧のみ
-  git-plus issue-edit -m           # コメントを追加（クローズしない）
-  git-plus issue-edit -c           # コメント入力後にissueをクローズ`,
+	Example: `  git issue-edit              # issueの一覧を表示して選択・編集
+  git issue-edit -v           # issueの一覧を表示して選択・閲覧のみ
+  git issue-edit -m           # コメントを追加（クローズしない）
+  git issue-edit -c           # コメント入力後にissueをクローズ`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// フラグの取得
 		viewOnly, err := cmd.Flags().GetBool("view")

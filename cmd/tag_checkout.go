@@ -1,7 +1,7 @@
 // ================================================================================
 // tag_checkout.go
 // ================================================================================
-// このファイルは git-plus の tag-checkout コマンドを実装しています。
+// このファイルは git の拡張コマンド tag-checkout コマンドを実装しています。
 //
 // 【概要】
 // tag-checkout コマンドは、最新のタグを取得してチェックアウトする機能を
@@ -15,10 +15,10 @@
 // - 最新タグに自動チェックアウト（-y オプション）
 //
 // 【使用例】
-//   git-plus tag-checkout                 # 最新10個のタグから選択
-//   git-plus tag-checkout -n 5            # 最新5個のタグから選択
-//   git-plus tag-checkout -y              # 最新タグに自動チェックアウト
-//   git-plus tag-checkout --limit 20      # 最新20個のタグから選択
+//   git tag-checkout                 # 最新10個のタグから選択
+//   git tag-checkout -n 5            # 最新5個のタグから選択
+//   git tag-checkout -y              # 最新タグに自動チェックアウト
+//   git tag-checkout --limit 20      # 最新20個のタグから選択
 //
 // 【ソート方法】
 // git tag --sort=-v:refname を使用してセマンティックバージョン順で
@@ -50,11 +50,11 @@ var tagCheckoutCmd = &cobra.Command{
 	Short: "最新のタグを取得してチェックアウト",
 	Long: `セマンティックバージョン順で最新のタグを取得してチェックアウトします。
 デフォルトでは最新10個のタグを表示し、選択してチェックアウトできます。`,
-	Example: `  git-plus tag-checkout                 # 最新10個のタグから選択
-  git-plus tag-checkout -n 5            # 最新5個のタグから選択
-  git-plus tag-checkout -y              # 最新タグに自動チェックアウト
-  git-plus tag-checkout --limit 20      # 最新20個のタグから選択
-  git-plus tag-checkout --latest        # 最新タグを表示するのみ`,
+	Example: `  git tag-checkout                 # 最新10個のタグから選択
+  git tag-checkout -n 5            # 最新5個のタグから選択
+  git tag-checkout -y              # 最新タグに自動チェックアウト
+  git tag-checkout --limit 20      # 最新20個のタグから選択
+  git tag-checkout --latest        # 最新タグを表示するのみ`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// 全てのタグを最新順に取得
 		tags, err := getTagsSortedByVersion()
@@ -186,6 +186,6 @@ func checkoutTag(tag string) error {
 func init() {
 	tagCheckoutCmd.Flags().IntVarP(&tagLimit, "limit", "n", 10, "表示するタグの数")
 	tagCheckoutCmd.Flags().BoolVarP(&autoYes, "yes", "y", false, "確認なしで最新タグにチェックアウト")
-	tagCheckoutCmd.Flags().BoolVar(&showLatest, "latest", false, "最新タグのみを表示")
+	tagCheckoutCmd.Flags().BoolVarP(&showLatest, "latest", "l", false, "最新タグのみを表示")
 	rootCmd.AddCommand(tagCheckoutCmd)
 }

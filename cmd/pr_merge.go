@@ -1,7 +1,7 @@
 // ================================================================================
 // pr_merge.go
 // ================================================================================
-// このファイルは git-plus の pr-merge コマンドを実装しています。
+// このファイルは git の拡張コマンド pr-merge を実装しています。
 //
 // 【概要】
 // pr-merge コマンドは、GitHub CLI の `gh pr merge` をラップして、
@@ -15,9 +15,9 @@
 // - すべての gh pr merge のオプションをサポート
 //
 // 【使用例】
-//   git-plus pr-merge              # PR をマージコミットで直接マージ（ブランチも削除）
-//   git-plus pr-merge 89           # PR #89 をマージコミットで直接マージ（ブランチも削除）
-//   git-plus pr-merge --squash     # スカッシュマージ（ブランチも削除）
+//   git pr-merge              # PR をマージコミットで直接マージ（ブランチも削除）
+//   git pr-merge 89           # PR #89 をマージコミットで直接マージ（ブランチも削除）
+//   git pr-merge --squash     # スカッシュマージ（ブランチも削除）
 //
 // 【内部仕様】
 // - GitHub CLI (gh) の gh pr merge コマンドをそのままラップ
@@ -61,11 +61,11 @@ PR番号を指定すると、その番号のPRをマージします。
   --subject <text>  マージコミットのサブジェクト
 
 内部的に GitHub CLI (gh) を使用してプルリクエストをマージします。`,
-	Example: `  git-plus pr-merge                    # カレントブランチのPRをマージコミットで直接マージ
-  git-plus pr-merge 89                 # PR #89 をマージコミットで直接マージ
-  git-plus pr-merge --squash           # スカッシュマージで直接マージ
-  git-plus pr-merge --rebase           # リベースマージで直接マージ
-  git-plus pr-merge 89 --squash --auto # PR #89 をスカッシュマージで自動マージ`,
+	Example: `  git pr-merge                    # カレントブランチのPRをマージコミットで直接マージ
+  git pr-merge 89                 # PR #89 をマージコミットで直接マージ
+  git pr-merge --squash           # スカッシュマージで直接マージ
+  git pr-merge --rebase           # リベースマージで直接マージ
+  git pr-merge 89 --squash --auto # PR #89 をスカッシュマージで自動マージ`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// GitHub CLI の確認
 		if !checkGitHubCLI() {

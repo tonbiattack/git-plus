@@ -1,5 +1,5 @@
 /*
-Package cmd は git-plus の各種コマンドを定義します。
+Package cmd は git の拡張コマンド各種コマンドを定義します。
 
 このファイル (reset_tag.go) は、Git タグをリセットして再作成するコマンドを提供します。
 既存のタグをローカルとリモートから削除し、最新のコミットに同名のタグを再作成します。
@@ -11,7 +11,7 @@ Package cmd は git-plus の各種コマンドを定義します。
   - リモートへのタグのプッシュ
 
 使用例:
-  git-plus reset-tag v1.2.3  # v1.2.3 タグをリセット
+  git reset-tag v1.2.3  # v1.2.3 タグをリセット
 */
 package cmd
 
@@ -29,7 +29,7 @@ var resetTagCmd = &cobra.Command{
 	Short: "タグをリセットして再作成",
 	Long: `指定したタグをローカルとリモートから削除し、
 最新コミットに同名のタグを再作成してリモートにプッシュします。`,
-	Example: `  git-plus reset-tag v1.2.3    # v1.2.3 タグをリセット`,
+	Example: `  git reset-tag v1.2.3    # v1.2.3 タグをリセット`,
 	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		tagName := args[0]

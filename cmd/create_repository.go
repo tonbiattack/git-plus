@@ -1,5 +1,5 @@
 /*
-Package cmd は git-plus の各種コマンドを定義します。
+Package cmd は git の拡張コマンド各種コマンドを定義します。
 
 このファイル (create_repository.go) は、GitHub リポジトリの作成から
 クローン、VSCode 起動までを一括で行うコマンドを提供します。
@@ -11,7 +11,7 @@ Package cmd は git-plus の各種コマンドを定義します。
   - VSCode の自動起動
 
 使用例:
-  git-plus create-repository my-new-project  # 対話的にリポジトリを作成
+  git create-repository my-new-project  # 対話的にリポジトリを作成
 */
 package cmd
 
@@ -37,7 +37,7 @@ var createRepositoryCmd = &cobra.Command{
   2. 作成したリポジトリをクローン
   3. クローンしたディレクトリに移動
   4. VSCodeでプロジェクトを開く`,
-	Example: `  git-plus create-repository my-new-project`,
+	Example: `  git create-repository my-new-project`,
 	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		repoName := args[0]

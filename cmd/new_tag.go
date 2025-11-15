@@ -1,7 +1,7 @@
 // ================================================================================
 // new_tag.go
 // ================================================================================
-// このファイルは git-plus の new-tag コマンドを実装しています。
+// このファイルは git の拡張コマンド new-tag コマンドを実装しています。
 //
 // 【概要】
 // new-tag コマンドは、セマンティックバージョニング（SemVer）に従って
@@ -23,15 +23,15 @@
 // - ドライラン（--dry-run オプション）
 //
 // 【使用例】
-//   git-plus new-tag                      # 対話的にタイプを選択
-//   git-plus new-tag feature              # 機能追加（minor）
-//   git-plus new-tag bug                  # バグ修正（patch）
-//   git-plus new-tag major                # 破壊的変更
-//   git-plus new-tag feature --push       # 作成してプッシュ
-//   git-plus new-tag bug -m "Fix issue"   # メッセージ付きで作成
-//   git-plus new-tag minor --dry-run      # 確認のみ
-//   git-plus new-tag feature --push --release              # タグ作成、プッシュ、リリース作成
-//   git-plus new-tag bug --push --release --release-draft  # ドラフトリリースとして作成
+//   git new-tag                      # 対話的にタイプを選択
+//   git new-tag feature              # 機能追加（minor）
+//   git new-tag bug                  # バグ修正（patch）
+//   git new-tag major                # 破壊的変更
+//   git new-tag feature --push       # 作成してプッシュ
+//   git new-tag bug -m "Fix issue"   # メッセージ付きで作成
+//   git new-tag minor --dry-run      # 確認のみ
+//   git new-tag feature --push --release              # タグ作成、プッシュ、リリース作成
+//   git new-tag bug --push --release --release-draft  # ドラフトリリースとして作成
 //
 // 【バージョン形式】
 // - 形式: v<major>.<minor>.<patch>
@@ -69,17 +69,17 @@ var newTagCmd = &cobra.Command{
 	Long: `セマンティックバージョニング（SemVer）に従って新しいタグを作成します。
 引数なしで実行すると対話的にバージョンタイプを選択できます。
 --releaseフラグを使用すると、タグプッシュ後に自動的にGitHubリリースも作成できます。`,
-	Example: `  git-plus new-tag                      # 対話的にタイプを選択
-  git-plus new-tag feature              # 機能追加（minor）
-  git-plus new-tag f                    # 機能追加の省略形
-  git-plus new-tag bug                  # バグ修正（patch）
-  git-plus new-tag b                    # バグ修正の省略形
-  git-plus new-tag major                # 破壊的変更
-  git-plus new-tag feature --push       # 作成してプッシュ
-  git-plus new-tag bug -m "Fix issue"   # メッセージ付きで作成
-  git-plus new-tag minor --dry-run      # 確認のみ
-  git-plus new-tag feature --push --release              # タグ作成、プッシュ、リリース作成
-  git-plus new-tag bug --push --release --release-draft  # ドラフトリリースとして作成`,
+	Example: `  git new-tag                      # 対話的にタイプを選択
+  git new-tag feature              # 機能追加（minor）
+  git new-tag f                    # 機能追加の省略形
+  git new-tag bug                  # バグ修正（patch）
+  git new-tag b                    # バグ修正の省略形
+  git new-tag major                # 破壊的変更
+  git new-tag feature --push       # 作成してプッシュ
+  git new-tag bug -m "Fix issue"   # メッセージ付きで作成
+  git new-tag minor --dry-run      # 確認のみ
+  git new-tag feature --push --release              # タグ作成、プッシュ、リリース作成
+  git new-tag bug --push --release --release-draft  # ドラフトリリースとして作成`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// 最新タグを取得
 		currentTag, err := getLatestTag()
@@ -430,9 +430,9 @@ func createReleaseFromTag(tag string, draft, prerelease bool) error {
 func init() {
 	newTagCmd.Flags().StringVarP(&tagMessage, "message", "m", "", "タグメッセージを指定（アノテーテッドタグを作成）")
 	newTagCmd.Flags().BoolVarP(&tagPush, "push", "p", false, "作成後に自動的にリモートへプッシュ")
-	newTagCmd.Flags().BoolVar(&tagDryRun, "dry-run", false, "実際には作成せず、次のバージョンだけを表示")
-	newTagCmd.Flags().BoolVar(&tagRelease, "release", false, "プッシュ後に自動的にGitHubリリースを作成")
-	newTagCmd.Flags().BoolVar(&tagReleaseDraft, "release-draft", false, "リリースをドラフトとして作成")
-	newTagCmd.Flags().BoolVar(&tagReleasePrerelease, "release-prerelease", false, "リリースをプレリリースとして作成")
+	newTagCmd.Flags().BoolVarP(&tagDryRun, "dry-run", "d", false, "実際には作成せず、次のバージョンだけを表示")
+	newTagCmd.Flags().BoolVarP(&tagRelease, "release", "r", false, "プッシュ後に自動的にGitHubリリースを作成")
+	newTagCmd.Flags().BoolVarP(&tagReleaseDraft, "release-draft", "D", false, "リリースをドラフトとして作成")
+	newTagCmd.Flags().BoolVarP(&tagReleasePrerelease, "release-prerelease", "P", false, "リリースをプレリリースとして作成")
 	rootCmd.AddCommand(newTagCmd)
 }

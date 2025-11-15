@@ -1,5 +1,5 @@
 /*
-Package cmd は git-plus の各種コマンドを定義します。
+Package cmd は git の拡張コマンド各種コマンドを定義します。
 
 このファイル (track.go) は、トラッキングブランチを設定するコマンドを提供します。
 現在のブランチに対してリモートトラッキングブランチを設定し、
@@ -11,9 +11,9 @@ Package cmd は git-plus の各種コマンドを定義します。
   - git push --set-upstream の自動実行
 
 使用例:
-  git-plus track                    # origin/<現在のブランチ> をトラッキング
-  git-plus track upstream           # upstream/<現在のブランチ> をトラッキング
-  git-plus track origin feature-123 # origin/feature-123 をトラッキング
+  git track                    # origin/<現在のブランチ> をトラッキング
+  git track upstream           # upstream/<現在のブランチ> をトラッキング
+  git track origin feature-123 # origin/feature-123 をトラッキング
 */
 package cmd
 
@@ -34,9 +34,9 @@ var trackCmd = &cobra.Command{
 リモートブランチが存在しない場合は、自動的に
 git push --set-upstream を実行してリモートブランチを作成し、
 トラッキング設定を行います。`,
-	Example: `  git-plus track                    # origin/<現在のブランチ> をトラッキング
-  git-plus track upstream           # upstream/<現在のブランチ> をトラッキング
-  git-plus track origin feature-123 # origin/feature-123 をトラッキング`,
+	Example: `  git track                    # origin/<現在のブランチ> をトラッキング
+  git track upstream           # upstream/<現在のブランチ> をトラッキング
+  git track origin feature-123 # origin/feature-123 をトラッキング`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// 現在のブランチ名を取得
 		currentBranch, err := fetchCurrentBranch()
