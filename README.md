@@ -26,7 +26,10 @@ Git の日常操作を少しだけ楽にするためのカスタムコマンド�
 - `git pr-checkout`：最新または指定されたプルリクエストをチェックアウトします。現在の作業を自動保存し、git resumeで復元できます。
 - `git clone-org`：GitHub組織のリポジトリを一括クローンします。最終更新日時でソートし、最新N個のみをクローン可能。既存リポジトリはスキップし、アーカイブやshallowクローンのオプションも利用可能です。
 - `git back`：前のブランチやタグに戻ります。`git checkout -` のショートカットで、ブランチやタグ間の素早い移動に便利です。
-- `git issue-edit`：GitHubのopenしているissueの一覧を表示し、選択したissueをエディタで編集します。基本的に題名は編集せず、本文の編集に特化しています。
+- `git issue-create`：エディタで題名と本文を入力し、GitHubに新しいissueを作成します。ユーザーが設定しているエディタで編集できます。
+- `git issue-edit`：GitHubのopenしているissueの一覧を表示し、選択したissueをエディタで編集します。題名（title）と本文（body）の両方を編集できます。-v/--viewオプションで閲覧のみも可能です。
+- `git release-notes`：既存のタグからGitHubリリースノートを自動生成します。GitHub CLIを使用して、タグ間の変更内容を自動的に解析してリリースを作成します。
+- `git repo-others`：ローカルにクローン済みの他人のGitHubリポジトリを一覧表示します。フォークも含め、README プレビューを表示し、番号選択でブラウザで開くことができます。
 
 Cobra フレームワークで実装された単一のバイナリから、`git-xxx` 形式の名前でシンボリックリンク（Linux/macOS）またはコピー（Windows）が作成され、`git xxx` として呼び出せる Git 拡張サブコマンドとして機能します。
 
@@ -61,7 +64,7 @@ cd git-plus
 - git-plus バイナリのビルド
 - `~/bin`（Windows: `%USERPROFILE%\bin`）への配置
 - 各コマンド用のシンボリックリンク作成（Linux/macOS）またはコピー作成（Windows）
-  - `git-newbranch`, `git-reset-tag`, `git-amend` など25個のコマンド
+  - `git-newbranch`, `git-reset-tag`, `git-amend` など28個のコマンド
 - PATH環境変数への追加
 
 これにより、`git newbranch`、`git step` などの形式でコマンドを呼び出せます。
@@ -103,7 +106,10 @@ ln -s git-plus git-browse
 ln -s git-plus git-pr-checkout
 ln -s git-plus git-clone-org
 ln -s git-plus git-back
+ln -s git-plus git-issue-create
 ln -s git-plus git-issue-edit
+ln -s git-plus git-release-notes
+ln -s git-plus git-repo-others
 
 # PATHに追加（まだ追加していない場合）
 echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
@@ -146,7 +152,10 @@ Copy-Item "$binPath\git-plus.exe" "$binPath\git-browse.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-pr-checkout.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-clone-org.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-back.exe"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-issue-create.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-issue-edit.exe"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-release-notes.exe"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-repo-others.exe"
 
 # PATHに追加（まだ追加していない場合）
 # システム環境変数に追加する場合は管理者権限で実行
@@ -1201,48 +1210,38 @@ gh auth login
 
 認証後、HTTPS経由でリポジトリをクローンします。SSH認証の設定は不要です。
 
-### git issue-edit
+### git issue-create
 
-GitHubのopenしているissueの一覧を表示し、選択したissueをエディタで編集するコマンドです。
+エディタで題名と本文を入力し、GitHubに新しいissueを作成するコマンドです。
 
 **使い方:**
 ```bash
-git issue-edit
+git issue-create
 ```
 
 **処理フロー:**
-1. GitHubのopenしているissueを一覧表示
-2. 番号を入力してissueを選択
-3. 選択したissueの本文を一時ファイルに書き出し
-4. ユーザーが設定しているエディタで編集
-5. 編集内容でissueを更新
+1. ユーザーが設定しているエディタで題名と本文を入力
+2. 入力内容でGitHubに新しいissueを作成
+3. 作成したissueのURLを表示
 
 **使用例:**
 ```bash
-git issue-edit
+git issue-create
 ```
 
 **実行の流れ:**
 ```
-Open Issue一覧 (3 個):
+エディタで新しいissueを作成中... (code --wait)
 
-1. #42: ログイン機能の不具合
-   ログインボタンを押しても反応がない...
+# エディタで以下のような内容を入力:
+# Title: 新機能の提案
+# ---
+#
+# ダークモード機能を追加してほしいです。
+# 詳細は以下の通りです...
 
-2. #43: ダークモード対応
-   ダークモードのデザインを実装してほしい...
-
-3. #44: パフォーマンス改善
-   初回読み込みが遅いため改善が必要...
-
-編集するissueを選択してください (番号を入力、Enterでキャンセル): 2
-
-選択されたissue: #43
-タイトル: ダークモード対応
-URL: https://github.com/username/repo/issues/43
-
-エディタで編集中... (code --wait)
-✓ issueを更新しました
+✓ issueを作成しました
+URL: https://github.com/username/repo/issues/45
 ```
 
 **エディタの設定:**
@@ -1262,30 +1261,32 @@ git config --global core.editor "code --wait"
 
 エディタで開かれるファイルは以下のような形式です：
 ```markdown
-# Issue #43: ダークモード対応
-# URL: https://github.com/username/repo/issues/43
+# 新しいIssueを作成
 #
-# 以下のissue本文を編集してください。
-# 1行目の '#' で始まる行はコメントとして無視されます。
-# ファイルを保存して閉じると、issueが更新されます。
+# 以下のissueの題名と本文を入力してください。
+# '#' で始まる行はコメントとして無視されます。
+# 'Title:' の後に題名を記載し、'---' の区切り線の後に本文を記載してください。
+# ファイルを保存して閉じると、issueが作成されます。
 # ========================================
 
-現在の本文がここに表示されます。
-この部分を編集して保存すると、issueが更新されます。
+Title:
+
+---
+
 ```
 
 **主な機能:**
-- **一覧表示**: openしているissueを番号付きで表示
-- **プレビュー**: 各issueの本文の最初の50文字をプレビュー表示
-- **エディタ編集**: ユーザーが設定しているエディタで編集可能
+- **エディタで編集**: ユーザーが設定しているエディタで題名と本文を入力可能
 - **コメント行除外**: `#` で始まる行はコメントとして無視
-- **変更検出**: 変更がない場合は更新をスキップ
+- **URL表示**: 作成後にissueのURLを表示
+- **空チェック**: 題名が空の場合はissue作成をキャンセル
 
 **注意事項:**
 - GitHub CLI (`gh`) がインストールされている必要があります
 - `gh auth login` でログイン済みである必要があります
-- 基本的にissueの題名（title）は編集せず、本文（body）のみを編集します
-- 題名を変更したい場合は `gh issue edit <番号> --title "新しい題名"` を使用してください
+- 題名は必須です。題名が空の場合はissue作成をキャンセルします
+- 本文は空でも作成可能です
+- タイトルは `Title:` の後に、本文は `---` の区切り線の後に記載します
 
 **GitHub CLI のインストール:**
 
@@ -1313,6 +1314,287 @@ gh auth login
 1. GitHub.com を選択
 2. HTTPS を選択
 3. ブラウザで認証を選択
+
+### git issue-edit
+
+GitHubのopenしているissueの一覧を表示し、選択したissueをエディタで編集するコマンドです。-v/--viewオプションを使用すると、編集せずに閲覧のみ行えます。
+
+**使い方:**
+```bash
+git issue-edit          # 編集モード
+git issue-edit -v       # 閲覧モード
+git issue-edit --view   # 閲覧モード（ロングオプション）
+```
+
+**処理フロー（編集モード）:**
+1. GitHubのopenしているissueを一覧表示
+2. 番号を入力してissueを選択
+3. 選択したissueの題名と本文を一時ファイルに書き出し
+4. ユーザーが設定しているエディタで編集
+5. 編集内容でissueを更新
+
+**処理フロー（閲覧モード -v/--view）:**
+1. GitHubのopenしているissueを一覧表示
+2. 番号を入力してissueを選択
+3. 選択したissueの題名と本文を表示
+4. 編集は行わずに終了
+
+**使用例（編集モード）:**
+```bash
+git issue-edit
+```
+
+**実行の流れ（編集モード）:**
+```
+Open Issue一覧 (3 個):
+
+1. #42: ログイン機能の不具合
+   ログインボタンを押しても反応がない...
+
+2. #43: ダークモード対応
+   ダークモードのデザインを実装してほしい...
+
+3. #44: パフォーマンス改善
+   初回読み込みが遅いため改善が必要...
+
+編集するissueを選択してください (番号を入力、Enterでキャンセル): 2
+
+選択されたissue: #43
+タイトル: ダークモード対応
+URL: https://github.com/username/repo/issues/43
+
+エディタで編集中... (code --wait)
+✓ issueを更新しました
+```
+
+**使用例（閲覧モード）:**
+```bash
+git issue-edit -v
+```
+
+**実行の流れ（閲覧モード）:**
+```
+Open Issue一覧 (3 個):
+
+1. #42: ログイン機能の不具合
+   ログインボタンを押しても反応がない...
+
+2. #43: ダークモード対応
+   ダークモードのデザインを実装してほしい...
+
+3. #44: パフォーマンス改善
+   初回読み込みが遅いため改善が必要...
+
+閲覧するissueを選択してください (番号を入力、Enterでキャンセル): 2
+
+選択されたissue: #43
+タイトル: ダークモード対応
+URL: https://github.com/username/repo/issues/43
+
+--- 本文 ---
+ダークモードのデザインを実装してほしいです。
+特に夜間の作業時に目が疲れるので、
+ダークモードの対応をお願いします。
+```
+
+**エディタの設定:**
+
+エディタは以下の優先順位で自動検出されます：
+1. `git config core.editor` の設定
+2. 環境変数 `VISUAL`
+3. 環境変数 `EDITOR`
+4. デフォルト（vi）
+
+VSCodeを使用する場合は、以下のように設定します：
+```bash
+git config --global core.editor "code --wait"
+```
+
+**一時ファイルの形式:**
+
+エディタで開かれるファイルは以下のような形式です：
+```markdown
+# Issue #43
+# URL: https://github.com/username/repo/issues/43
+#
+# 以下のissueの題名と本文を編集してください。
+# '#' で始まる行はコメントとして無視されます。
+# 'Title:' の後に題名を記載し、'---' の区切り線の後に本文を記載してください。
+# ファイルを保存して閉じると、issueが更新されます。
+# ========================================
+
+Title: ダークモード対応
+
+---
+
+現在の本文がここに表示されます。
+この部分を編集して保存すると、issueが更新されます。
+```
+
+**主な機能:**
+- **一覧表示**: openしているissueを番号付きで表示
+- **プレビュー**: 各issueの本文の最初の50文字をプレビュー表示
+- **タイトル編集**: issueのタイトルも編集可能
+- **本文編集**: issueの本文も編集可能
+- **エディタ編集**: ユーザーが設定しているエディタで編集可能
+- **コメント行除外**: `#` で始まる行はコメントとして無視
+- **変更検出**: タイトルと本文の両方で変更を検出し、変更がない場合は更新をスキップ
+- **閲覧モード**: -v/--viewオプションで編集せずに閲覧のみ可能
+
+**注意事項:**
+- GitHub CLI (`gh`) がインストールされている必要があります
+- `gh auth login` でログイン済みである必要があります
+- タイトルと本文の両方を編集できます
+- タイトルは `Title:` の後に、本文は `---` の区切り線の後に記載します
+
+**GitHub CLI のインストール:**
+
+Windows (winget):
+```powershell
+winget install --id GitHub.cli
+```
+
+macOS (Homebrew):
+```bash
+brew install gh
+```
+
+Linux (Debian/Ubuntu):
+```bash
+sudo apt install gh
+```
+
+**認証方法:**
+```bash
+gh auth login
+```
+
+対話的に以下を選択:
+1. GitHub.com を選択
+2. HTTPS を選択
+3. ブラウザで認証を選択
+
+### git release-notes
+
+既存のタグからGitHubのリリースノートを自動生成するコマンドです。
+
+**使い方:**
+```bash
+git release-notes [オプション]
+```
+
+**処理フロー:**
+1. 既存のタグを一覧表示（または指定されたタグを使用）
+2. タグを選択
+3. GitHub CLIを使用してリリースノートを自動生成
+4. GitHubリリースとして公開
+
+**オプション:**
+- `--tag <タグ名>`: リリースを作成するタグを指定
+- `--latest`: 最新タグからリリースを作成
+- `--draft`: ドラフトとして作成
+- `--prerelease`: プレリリースとして作成
+- `-h, --help`: ヘルプを表示
+
+**使用例:**
+```bash
+# 対話的にタグを選択
+git release-notes
+
+# 指定したタグからリリース作成
+git release-notes --tag v1.2.3
+
+# 最新タグからリリース作成
+git release-notes --latest
+
+# ドラフトとして作成
+git release-notes --draft
+
+# プレリリースとして作成
+git release-notes --prerelease
+
+# 複数のオプションを組み合わせ
+git release-notes --tag v1.2.3 --draft --prerelease
+```
+
+**実行の流れ（対話的モード）:**
+```
+最近のタグ一覧 (10 個):
+
+1. v1.3.0
+2. v1.2.5
+3. v1.2.4
+4. v1.2.3
+5. v1.2.2
+...
+
+リリースノートを作成するタグを選択してください (番号を入力、Enterでキャンセル): 1
+
+選択されたタグ: v1.3.0
+
+タグ: v1.3.0
+
+リリースノートを作成しますか？ (Y/n): y
+
+✓ リリースノートを作成しました
+詳細を確認するには: gh release view v1.3.0 --web
+```
+
+**主な機能:**
+- **自動リリースノート生成**: GitHub CLIの`--generate-notes`オプションを使用して、タグ間の変更内容から自動的にリリースノートを生成します。
+- **対話的なタグ選択**: タグを指定しない場合、最近のタグから選択できます。
+- **ドラフトモード**: `--draft`オプションでドラフトとして作成し、公開前にレビューできます。
+- **プレリリースモード**: `--prerelease`オプションでプレリリースとしてマークできます。
+- **最新タグ自動選択**: `--latest`オプションで最新タグを自動的に使用できます。
+
+**注意事項:**
+- GitHub CLI (`gh`) がインストールされている必要があります
+- `gh auth login`でログイン済みである必要があります
+- このコマンドは既存のタグに対してリリースを作成します
+- 新しいタグを作成する場合は、事前に`git new-tag`コマンドを使用してください
+- リリースノートは、前のタグとの差分から自動的に生成されます
+- 生成されたリリースノートには、PRのタイトルとマージされた変更が含まれます
+
+**GitHub CLI のインストール:**
+
+Windows (winget):
+```powershell
+winget install --id GitHub.cli
+```
+
+macOS (Homebrew):
+```bash
+brew install gh
+```
+
+Linux (Debian/Ubuntu):
+```bash
+sudo apt install gh
+```
+
+**認証方法:**
+```bash
+gh auth login
+```
+
+対話的に以下を選択:
+1. GitHub.com を選択
+2. HTTPS を選択
+3. ブラウザで認証を選択
+
+**git new-tag との連携:**
+
+新しいバージョンをリリースする場合の推奨フロー:
+```bash
+# 1. 新しいタグを作成してプッシュ
+git new-tag feature --push
+
+# 2. リリースノートを作成
+git release-notes --latest
+
+# または一度に実行（最新タグを自動使用）
+git new-tag feature --push && git release-notes --latest
+```
 
 ## 開発メモ
 
