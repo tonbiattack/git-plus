@@ -80,3 +80,48 @@ func Confirm(prompt string, defaultYes bool) bool {
 	// yes/noの判定
 	return input == "y" || input == "yes"
 }
+
+// NormalizeNumberInput は数字入力を正規化し、全角数字を半角数字に変換する
+//
+// パラメータ:
+//   - input: ユーザー入力文字列
+//
+// 戻り値:
+//   - string: 正規化された入力（前後の空白を削除し、全角数字を半角数字に変換）
+//
+// 変換ルール:
+//   - １ → 1
+//   - ２ → 2
+//   - ３ → 3
+//   - ４ → 4
+//   - ５ → 5
+//   - ６ → 6
+//   - ７ → 7
+//   - ８ → 8
+//   - ９ → 9
+//   - ０ → 0
+//
+// 使用例:
+//
+//	input := ui.NormalizeNumberInput(rawInput)
+//	selection, err := strconv.Atoi(input)
+func NormalizeNumberInput(input string) string {
+	// 前後の空白を削除
+	normalized := strings.TrimSpace(input)
+
+	// 全角数字を半角数字に変換
+	replacer := strings.NewReplacer(
+		"１", "1",
+		"２", "2",
+		"３", "3",
+		"４", "4",
+		"５", "5",
+		"６", "6",
+		"７", "7",
+		"８", "8",
+		"９", "9",
+		"０", "0",
+	)
+
+	return replacer.Replace(normalized)
+}

@@ -16,18 +16,19 @@ Git の日常操作を少しだけ楽にするためのカスタムコマンド�
 - `git recent`：最近使用したブランチを時系列で表示し、番号で選択して簡単に切り替えられます。
 - `git step`：リポジトリ全体のステップ数とユーザーごとの貢献度を11の指標で集計します。追加比、削除比、更新比、コード割合など多角的な分析が可能です。
 - `git sync`：現在のブランチを最新のリモートブランチ（main/master）と同期します。rebaseを使用して履歴をきれいに保ちます。
-- `git pr-merge`：PRの作成からマージ、ブランチ削除、最新の変更取得までを一気に実行します。GitHub CLIを使用した自動化コマンドです。
-- `git merge-pr`：プルリクエストをマージします。`gh pr merge` のラッパーで、デフォルトでマージコミットを作成し、ブランチを削除します。
+- `git pr-create-merge`：PRの作成からマージ、ブランチ削除、最新の変更取得までを一気に実行します。GitHub CLIを使用した自動化コマンドです。
+- `git pr-list`：プルリクエスト一覧を表示します。`gh pr list` のラッパーで、状態やラベルでフィルタリングできます。
+- `git pr-merge`：プルリクエストをマージします。`gh pr merge` のラッパーで、デフォルトでマージコミットを作成し、ブランチを削除します。
 - `git pause`：現在の作業を一時保存してブランチを切り替えます。変更をスタッシュして、別のブランチでの作業を開始できます。
 - `git resume`：git pause で保存した作業を復元します。元のブランチに戻り、スタッシュから変更を復元します。
 - `git create-repository`：GitHubリポジトリの作成からクローン、VSCode起動までを自動化します。public/private選択、説明の指定が可能です。
-- `git new-tag`：セマンティックバージョニングに従って新しいタグを自動生成します。feature/bug指定でminor/patchを自動判定します。
+- `git new-tag`：セマンティックバージョニングに従って新しいタグを自動生成します。feature/bug指定でminor/patchを自動判定し、--releaseフラグでGitHubリリースも自動作成できます。
 - `git browse`：現在のリポジトリをブラウザで開きます。リポジトリの概要を素早く確認したい場合に便利です。
 - `git pr-checkout`：最新または指定されたプルリクエストをチェックアウトします。現在の作業を自動保存し、git resumeで復元できます。
 - `git clone-org`：GitHub組織のリポジトリを一括クローンします。最終更新日時でソートし、最新N個のみをクローン可能。既存リポジトリはスキップし、アーカイブやshallowクローンのオプションも利用可能です。
 - `git back`：前のブランチやタグに戻ります。`git checkout -` のショートカットで、ブランチやタグ間の素早い移動に便利です。
 - `git issue-create`：エディタで題名と本文を入力し、GitHubに新しいissueを作成します。ユーザーが設定しているエディタで編集できます。
-- `git issue-edit`：GitHubのopenしているissueの一覧を表示し、選択したissueをエディタで編集します。題名（title）と本文（body）の両方を編集できます。-v/--viewオプションで閲覧のみも可能です。
+- `git issue-edit`：GitHubのopenしているissueの一覧を表示し、選択したissueをエディタで編集します。題名（title）と本文（body）の両方を編集できます。-v/--viewオプションで閲覧のみ、-m/--commentオプションでコメント追加（クローズしない）、-c/--closeオプションでコメント入力後にクローズが可能です。
 - `git release-notes`：既存のタグからGitHubリリースノートを自動生成します。GitHub CLIを使用して、タグ間の変更内容を自動的に解析してリリースを作成します。
 - `git repo-others`：ローカルにクローン済みの他人のGitHubリポジトリを一覧表示します。フォークも含め、README プレビューを表示し、番号選択でブラウザで開くことができます。
 
@@ -96,8 +97,9 @@ ln -s git-plus git-stash-select
 ln -s git-plus git-recent
 ln -s git-plus git-step
 ln -s git-plus git-sync
+ln -s git-plus git-pr-create-merge
 ln -s git-plus git-pr-merge
-ln -s git-plus git-merge-pr
+ln -s git-plus git-pr-list
 ln -s git-plus git-pause
 ln -s git-plus git-resume
 ln -s git-plus git-create-repository
@@ -142,7 +144,9 @@ Copy-Item "$binPath\git-plus.exe" "$binPath\git-stash-select.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-recent.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-step.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-sync.exe"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-pr-create-merge.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-pr-merge.exe"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-pr-list.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-merge-pr.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-pause.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-resume.exe"
@@ -212,7 +216,7 @@ go run . stash-select
 go run . recent
 go run . step
 go run . sync
-go run . pr-merge
+go run . pr-create-merge
 go run . pause main
 go run . resume
 go run . new-tag feature
@@ -669,10 +673,12 @@ git new-tag feature          # 機能追加（minor）
 git new-tag bug              # バグ修正（patch）
 git new-tag major            # 破壊的変更
 git new-tag f --push         # 省略形 + プッシュ
+git new-tag feature --push --release              # タグ作成、プッシュ、リリース作成
+git new-tag bug --push --release --release-draft  # ドラフトリリースとして作成
 git new-tag -h               # ヘルプを表示
 ```
 
-セマンティックバージョニングに従って新しいタグを自動生成します。現在の最新タグから自動的に次のバージョンを計算します。
+セマンティックバージョニングに従って新しいタグを自動生成します。現在の最新タグから自動的に次のバージョンを計算します。`--release`フラグを使用すると、タグプッシュ後に自動的にGitHubリリースも作成できます。
 
 **主な機能:**
 - **自動バージョン計算**: 最新タグ（v1.2.3）から次のバージョンを自動計算
@@ -680,6 +686,7 @@ git new-tag -h               # ヘルプを表示
 - **省略形サポート**: f（feature）、b（bug）、m（major）など
 - **確認プロンプト**: 誤ったタグ作成を防ぐ
 - **自動プッシュ**: `--push` オプションでリモートへ自動プッシュ
+- **自動リリース作成**: `--release` オプションでGitHubリリースも自動作成
 - **対話的モード**: 引数なしで実行時に選択肢を表示
 
 **バージョンタイプ:**
@@ -693,6 +700,9 @@ git new-tag -h               # ヘルプを表示
 **オプション:**
 - `-m, --message <msg>`: タグメッセージを指定（アノテーテッドタグを作成）
 - `--push`: 作成後に自動的にリモートへプッシュ
+- `--release`: プッシュ後に自動的にGitHubリリースを作成
+- `--release-draft`: リリースをドラフトとして作成
+- `--release-prerelease`: リリースをプレリリースとして作成
 - `--dry-run`: 実際には作成せず、次のバージョンだけを表示
 
 **使用例:**
@@ -730,6 +740,21 @@ git new-tag
 #   [2] minor   - v1.3.0 (機能追加)
 #   [3] patch   - v1.2.4 (バグ修正)
 # 選択 (1-3): 2
+
+# タグ作成、プッシュ、リリース作成を一度に実行
+git new-tag feature --push --release
+# ✓ タグを作成しました: v1.3.0
+# ✓ リモートにプッシュしました: v1.3.0
+#
+# GitHubリリースを作成中...
+# ✓ GitHubリリースを作成しました
+# 詳細を確認するには: gh release view v1.3.0 --web
+
+# ドラフトリリースとして作成
+git new-tag bug --push --release --release-draft
+
+# プレリリースとして作成
+git new-tag minor --push --release --release-prerelease
 ```
 
 **動作:**
@@ -739,11 +764,15 @@ git new-tag
 4. 確認プロンプトを表示
 5. タグを作成（メッセージありの場合はアノテーテッドタグ）
 6. `--push` オプションがある場合はリモートへプッシュ
+7. `--release` オプションがある場合はGitHubリリースを作成（`gh release create --generate-notes`）
 
 **注意事項:**
 - タグが存在しない場合はエラーになります。最初のタグは手動で作成してください（例: `git tag v0.1.0`）
 - セマンティックバージョニング（v1.2.3形式）に従ったタグが必要です
 - リモートへのプッシュは `--push` オプションを指定した場合のみ実行されます
+- リリース作成には `--push` オプションが必要です（タグがリモートにプッシュされている必要があるため）
+- リリース作成には GitHub CLI (gh) がインストールされ、ログイン済みである必要があります
+- 対話モードでは、タグをプッシュした後に「GitHubリリースを作成しますか？」という確認プロンプトが表示されます
 
 ### git pr-checkout
 
@@ -800,11 +829,117 @@ git resume
 - チェックアウト後は `git resume` で元のブランチに戻ることができます
 - PRブランチで作業した内容は通常通りコミット・プッシュできます
 
-### git pr-merge
+### git pr-list
 
 ```bash
-git pr-merge [ベースブランチ名]
-git pr-merge -h              # ヘルプを表示
+git pr-list [オプション]
+git pr-list -h               # ヘルプを表示
+```
+
+プルリクエストの一覧を表示します。GitHub CLI の `gh pr list` をラップして、Git コマンドとして実行できるようにします。
+
+**主な機能:**
+- **PR一覧の表示**: リポジトリのプルリクエストを一覧表示
+- **フィルタリング**: 状態、作成者、アサイン先、ラベル、ブランチなどでフィルタリング可能
+- **柔軟な出力形式**: テーブル形式、JSON、カスタムテンプレートなどで出力
+- **すべてのオプションをサポート**: `gh pr list` のすべてのオプションがそのまま使用可能
+
+**使用例:**
+
+```bash
+# 基本的な使い方
+git pr-list                      # オープンなPRの一覧を表示
+
+# 状態でフィルタリング
+git pr-list --state open         # オープンなPRのみ表示（デフォルト）
+git pr-list --state closed       # クローズされたPRのみ表示
+git pr-list --state merged       # マージされたPRのみ表示
+git pr-list --state all          # すべてのPRを表示
+
+# 作成者やアサイン先でフィルタリング
+git pr-list --author @me         # 自分が作成したPRを表示
+git pr-list --assignee @me       # 自分にアサインされたPRを表示
+git pr-list --author octocat     # 特定ユーザーが作成したPRを表示
+
+# ラベルやブランチでフィルタリング
+git pr-list --label bug          # "bug" ラベルが付いたPRを表示
+git pr-list --label "help wanted" # "help wanted" ラベルが付いたPRを表示
+git pr-list --base main          # mainブランチへのPRを表示
+git pr-list --head feature-123   # feature-123ブランチからのPRを表示
+
+# 表示件数の制限
+git pr-list --limit 10           # 最新10件のPRを表示
+git pr-list --limit 50           # 最新50件のPRを表示
+
+# JSON形式で出力
+git pr-list --json number,title,state,author
+git pr-list --json number,title,url --jq '.[].url'
+
+# ブラウザで開く
+git pr-list --web                # ブラウザでPR一覧を開く
+
+# 複数のオプションを組み合わせ
+git pr-list --state merged --author @me --limit 20
+```
+
+**サポートされるオプション:**
+
+| オプション | 説明 |
+|----------|------|
+| `--state <state>` | PR の状態でフィルタ（`open`, `closed`, `merged`, `all`） |
+| `--author <user>` | 作成者でフィルタ（`@me` で自分のPR） |
+| `--assignee <user>` | アサイン先でフィルタ（`@me` で自分がアサインされたPR） |
+| `--label <name>` | ラベルでフィルタ |
+| `--limit <int>` | 表示件数を制限（デフォルト: 30） |
+| `--base <branch>` | ベースブランチでフィルタ |
+| `--head <branch>` | ヘッドブランチでフィルタ |
+| `--json <fields>` | JSON形式で出力 |
+| `--jq <expression>` | jq式でフィルタ |
+| `--template <string>` | Go template形式で出力 |
+| `--web` | ブラウザで開く |
+
+**前提条件:**
+- GitHub CLI (gh) がインストールされていること
+- `gh auth login`でログイン済みであること
+- GitHubリポジトリのPRにアクセスできること
+
+**注意事項:**
+- すべての `gh pr list` のオプションがそのまま使用できます
+- デフォルトでは最新30件のオープンなPRが表示されます
+- `--limit` オプションで表示件数を変更できます
+
+**GitHub CLI のインストール:**
+
+Windows (winget):
+```powershell
+winget install --id GitHub.cli
+```
+
+macOS (Homebrew):
+```bash
+brew install gh
+```
+
+Linux (Debian/Ubuntu):
+```bash
+sudo apt install gh
+```
+
+**認証方法:**
+```bash
+gh auth login
+```
+
+対話的に以下を選択:
+1. GitHub.com を選択
+2. HTTPS を選択
+3. ブラウザで認証を選択
+
+### git pr-create-merge
+
+```bash
+git pr-create-merge [ベースブランチ名]
+git pr-create-merge -h              # ヘルプを表示
 ```
 
 PRの作成からマージ、ブランチ削除、最新の変更取得までを一気に実行します。GitHub CLIを使用して以下の処理を自動化します:
@@ -826,10 +961,10 @@ git commit -m "Add new feature"
 git push
 
 # 方法1: ベースブランチを引数で指定
-git pr-merge main
+git pr-create-merge main
 
 # 方法2: 対話的に入力
-git pr-merge
+git pr-create-merge
 # マージ先のベースブランチを入力してください (デフォルト: main): develop
 
 # 確認プロンプト
@@ -857,11 +992,11 @@ git pr-merge
 - `--auto`オプションを使用するため、ステータスチェックが通過すると自動的にマージされます
 - マージ後、リモートのブランチは自動的に削除されます
 
-### git merge-pr
+### git pr-merge
 
 ```bash
-git merge-pr [PR番号] [オプション]
-git merge-pr -h              # ヘルプを表示
+git pr-merge [PR番号] [オプション]
+git pr-merge -h              # ヘルプを表示
 ```
 
 プルリクエストをマージします。GitHub CLI の `gh pr merge` をラップして、Git コマンドとして実行できるようにします。
@@ -878,22 +1013,22 @@ git merge-pr -h              # ヘルプを表示
 
 ```bash
 # カレントブランチのPRをマージコミットで直接マージ（ブランチも削除）
-git merge-pr
+git pr-merge
 
 # PR番号を指定してマージコミットで直接マージ（ブランチも削除）
-git merge-pr 89
+git pr-merge 89
 
 # スカッシュマージで直接マージ（ブランチも削除）
-git merge-pr --squash
+git pr-merge --squash
 
 # リベースマージで直接マージ（ブランチも削除）
-git merge-pr --rebase
+git pr-merge --rebase
 
 # 複数のオプションを組み合わせ
-git merge-pr 89 --squash --auto
+git pr-merge 89 --squash --auto
 
 # 自動マージ（ステータスチェック通過後に自動マージ）
-git merge-pr --auto
+git pr-merge --auto
 ```
 
 **サポートされるオプション:**
@@ -907,12 +1042,12 @@ git merge-pr --auto
 
 その他のオプションについては `gh pr merge --help` を参照してください。
 
-**git pr-merge との違い:**
+**git pr-create-merge との違い:**
 
 | コマンド | 用途 |
 |---------|------|
-| `git pr-merge` | PR作成→マージ→ブランチ切り替え→pull の一連の流れを自動化 |
-| `git merge-pr` | 既存のPRをマージコミットで直接マージ（`gh pr merge` のラッパー） |
+| `git pr-create-merge` | PR作成→マージ→ブランチ切り替え→pull の一連の流れを自動化 |
+| `git pr-merge` | 既存のPRをマージコミットで直接マージ（`gh pr merge` のラッパー） |
 
 **前提条件:**
 - GitHub CLI (gh) がインストールされていること
@@ -1317,13 +1452,15 @@ gh auth login
 
 ### git issue-edit
 
-GitHubのopenしているissueの一覧を表示し、選択したissueをエディタで編集するコマンドです。-v/--viewオプションを使用すると、編集せずに閲覧のみ行えます。
+GitHubのopenしているissueの一覧を表示し、選択したissueをエディタで編集するコマンドです。-v/--viewオプションで閲覧のみ、-m/--commentオプションでコメント追加（クローズしない）、-c/--closeオプションでコメント入力後にクローズが可能です。
 
 **使い方:**
 ```bash
-git issue-edit          # 編集モード
-git issue-edit -v       # 閲覧モード
-git issue-edit --view   # 閲覧モード（ロングオプション）
+git issue-edit              # 編集モード
+git issue-edit -v           # 閲覧モード
+git issue-edit --view       # 閲覧モード（ロングオプション）
+git issue-edit -m           # コメント追加モード（クローズしない）
+git issue-edit -c           # コメント入力後にクローズ
 ```
 
 **処理フロー（編集モード）:**
@@ -1338,6 +1475,19 @@ git issue-edit --view   # 閲覧モード（ロングオプション）
 2. 番号を入力してissueを選択
 3. 選択したissueの題名と本文を表示
 4. 編集は行わずに終了
+
+**処理フロー（コメント追加モード -m/--comment）:**
+1. GitHubのopenしているissueを一覧表示
+2. 番号を入力してissueを選択
+3. エディタでコメントを入力
+4. コメントをissueに投稿（クローズしない）
+
+**処理フロー（クローズモード -c/--close）:**
+1. GitHubのopenしているissueを一覧表示
+2. 番号を入力してissueを選択
+3. エディタでコメントを入力（任意）
+4. コメントが入力された場合は投稿
+5. issueをクローズ
 
 **使用例（編集モード）:**
 ```bash
@@ -1397,6 +1547,66 @@ URL: https://github.com/username/repo/issues/43
 ダークモードの対応をお願いします。
 ```
 
+**使用例（コメント追加モード）:**
+```bash
+git issue-edit -m
+```
+
+**実行の流れ（コメント追加モード）:**
+```
+Open Issue一覧 (3 個):
+
+1. #42: ログイン機能の不具合
+   ログインボタンを押しても反応がない...
+
+2. #43: ダークモード対応
+   ダークモードのデザインを実装してほしい...
+
+3. #44: パフォーマンス改善
+   初回読み込みが遅いため改善が必要...
+
+編集するissueを選択してください (番号を入力、Enterでキャンセル): 2
+
+選択されたissue: #43
+タイトル: ダークモード対応
+URL: https://github.com/username/repo/issues/43
+
+エディタでコメントを入力中... (code --wait)
+✓ コメントを追加しました
+```
+
+**使用例（クローズモード）:**
+```bash
+git issue-edit -c
+```
+
+**実行の流れ（クローズモード）:**
+```
+Open Issue一覧 (3 個):
+
+1. #42: ログイン機能の不具合
+   ログインボタンを押しても反応がない...
+
+2. #43: ダークモード対応
+   ダークモードのデザインを実装してほしい...
+
+3. #44: パフォーマンス改善
+   初回読み込みが遅いため改善が必要...
+
+編集するissueを選択してください (番号を入力、Enterでキャンセル): 2
+
+選択されたissue: #43
+タイトル: ダークモード対応
+URL: https://github.com/username/repo/issues/43
+
+エディタでコメントを入力中... (code --wait)
+# コメントを入力してエディタを閉じる
+✓ コメントを追加しました
+✓ issueをクローズしました
+```
+
+**注：** コメントが空の場合は、コメントなしでissueをクローズします。
+
 **エディタの設定:**
 
 エディタは以下の優先順位で自動検出されます：
@@ -1410,7 +1620,7 @@ VSCodeを使用する場合は、以下のように設定します：
 git config --global core.editor "code --wait"
 ```
 
-**一時ファイルの形式:**
+**一時ファイルの形式（編集モード）:**
 
 エディタで開かれるファイルは以下のような形式です：
 ```markdown
@@ -1431,6 +1641,20 @@ Title: ダークモード対応
 この部分を編集して保存すると、issueが更新されます。
 ```
 
+**一時ファイルの形式（コメント追加モード）:**
+
+エディタで開かれるファイルは以下のような形式です：
+```markdown
+# Issue #43 へのコメント
+# URL: https://github.com/username/repo/issues/43
+#
+# このissueに追加するコメントを記載してください。
+# '#' で始まる行はコメントとして無視されます。
+# ファイルを保存して閉じると、コメントが投稿されます。
+# ========================================
+
+```
+
 **主な機能:**
 - **一覧表示**: openしているissueを番号付きで表示
 - **プレビュー**: 各issueの本文の最初の50文字をプレビュー表示
@@ -1440,6 +1664,9 @@ Title: ダークモード対応
 - **コメント行除外**: `#` で始まる行はコメントとして無視
 - **変更検出**: タイトルと本文の両方で変更を検出し、変更がない場合は更新をスキップ
 - **閲覧モード**: -v/--viewオプションで編集せずに閲覧のみ可能
+- **コメント追加**: -m/--commentオプションでエディタからコメントを追加可能（クローズしない）
+- **issueクローズ**: -c/--closeオプションでコメント入力後にissueをクローズ可能
+- **柔軟な運用**: コメントは任意で、空の場合はコメントなしでクローズ
 
 **注意事項:**
 - GitHub CLI (`gh`) がインストールされている必要があります

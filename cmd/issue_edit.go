@@ -13,10 +13,14 @@
 // - ユーザーが設定しているエディタ（VSCode等）での編集
 // - 題名（title）と本文（body）の両方を編集可能
 // - -v/--view オプションで閲覧モード（編集せずに表示のみ）
+// - -m/--comment オプションでコメントを追加（クローズしない）
+// - -c/--close オプションでコメント入力後にissueをクローズ
 //
 // 【使用例】
-//   git-plus issue-edit          # issueの一覧を表示して選択・編集
-//   git-plus issue-edit -v       # issueの一覧を表示して選択・閲覧のみ
+//   git-plus issue-edit              # issueの一覧を表示して選択・編集
+//   git-plus issue-edit -v           # issueの一覧を表示して選択・閲覧のみ
+//   git-plus issue-edit -m           # コメントを追加（クローズしない）
+//   git-plus issue-edit -c           # コメント入力後にissueをクローズ
 //
 // 【内部仕様】
 // - GitHub CLI (gh) の gh issue list / gh issue edit を使用
@@ -41,6 +45,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/tonbiattack/git-plus/internal/gitcmd"
+	"github.com/tonbiattack/git-plus/internal/ui"
 )
 
 // IssueEntry はissueの詳細情報を表す構造体
@@ -67,16 +72,34 @@ var issueEditCmd = &cobra.Command{
 題名（title）と本文（body）の両方を編集できます。
 
 -v/--view オプションを使用すると、編集せずに閲覧のみ行えます。
+-m/--comment オプションを使用すると、コメントを追加できます（クローズしない）。
+-c/--close オプションを使用すると、コメント入力後にissueをクローズできます。
 
 内部的に GitHub CLI (gh) を使用してissueと連携します。`,
-	Example: `  git-plus issue-edit          # issueの一覧を表示して選択・編集
-  git-plus issue-edit -v       # issueの一覧を表示して選択・閲覧のみ`,
+	Example: `  git-plus issue-edit              # issueの一覧を表示して選択・編集
+  git-plus issue-edit -v           # issueの一覧を表示して選択・閲覧のみ
+  git-plus issue-edit -m           # コメントを追加（クローズしない）
+  git-plus issue-edit -c           # コメント入力後にissueをクローズ`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// viewフラグの取得
+		// フラグの取得
 		viewOnly, err := cmd.Flags().GetBool("view")
 		if err != nil {
 			return fmt.Errorf("viewフラグの取得に失敗: %w", err)
 		}
+		addComment, err := cmd.Flags().GetBool("comment")
+		if err != nil {
+			return fmt.Errorf("commentフラグの取得に失敗: %w", err)
+		}
+		closeIssue, err := cmd.Flags().GetBool("close")
+		if err != nil {
+			return fmt.Errorf("closeフラグの取得に失敗: %w", err)
+		}
+
+		// viewフラグと他のフラグの組み合わせチェック
+		if viewOnly && (addComment || closeIssue) {
+			return fmt.Errorf("viewフラグは他のフラグと同時に使用できません")
+		}
+
 		// GitHub CLI の確認
 		if !checkGitHubCLIInstalled() {
 			return fmt.Errorf("GitHub CLI (gh) がインストールされていません\nインストール方法: https://cli.github.com/")
@@ -120,7 +143,7 @@ var issueEditCmd = &cobra.Command{
 			return fmt.Errorf("入力の読み込みに失敗しました: %w", err)
 		}
 
-		input = strings.TrimSpace(input)
+		input = ui.NormalizeNumberInput(input)
 		if input == "" {
 			fmt.Println("キャンセルしました。")
 			return nil
@@ -148,6 +171,33 @@ var issueEditCmd = &cobra.Command{
 				fmt.Println("(本文なし)")
 			}
 			fmt.Println()
+			return nil
+		}
+
+		// コメント追加フラグまたはクローズフラグが指定された場合
+		if addComment || closeIssue {
+			// コメント入力画面を開く
+			comment, err := promptForComment(&selectedIssue)
+			if err != nil {
+				return fmt.Errorf("コメントの入力に失敗しました: %w", err)
+			}
+
+			// コメントが空でない場合は投稿
+			if strings.TrimSpace(comment) != "" {
+				if err := postComment(selectedIssue.Number, comment); err != nil {
+					return fmt.Errorf("コメントの投稿に失敗: %w", err)
+				}
+				fmt.Println("✓ コメントを追加しました")
+			}
+
+			// issueをクローズ（-c が指定された場合）
+			if closeIssue {
+				if err := closeGitHubIssue(selectedIssue.Number); err != nil {
+					return fmt.Errorf("issueのクローズに失敗しました: %w", err)
+				}
+				fmt.Println("✓ issueをクローズしました")
+			}
+
 			return nil
 		}
 
@@ -413,8 +463,101 @@ func updateIssue(issueNumber int, newTitle, newBody string) error {
 	return cmd.Run()
 }
 
+// promptForComment はエディタでコメントを入力してもらい、その内容を返します。
+func promptForComment(issue *IssueEntry) (string, error) {
+	// エディタを取得
+	editor, err := getEditor()
+	if err != nil {
+		return "", fmt.Errorf("エディタの取得に失敗: %w", err)
+	}
+
+	// 一時ファイルを作成
+	tmpFile, err := createTempCommentFile(issue)
+	if err != nil {
+		return "", fmt.Errorf("一時ファイルの作成に失敗: %w", err)
+	}
+	defer os.Remove(tmpFile)
+
+	// エディタで編集
+	fmt.Printf("エディタでコメントを入力中... (%s)\n", editor)
+	if err := openEditor(editor, tmpFile); err != nil {
+		return "", fmt.Errorf("エディタの起動に失敗: %w", err)
+	}
+
+	// 編集後の内容を読み込み
+	comment, err := readCommentFromFile(tmpFile)
+	if err != nil {
+		return "", fmt.Errorf("コメント内容の読み込みに失敗: %w", err)
+	}
+
+	return comment, nil
+}
+
+// createTempCommentFile はコメント入力用の一時ファイルを作成します。
+func createTempCommentFile(issue *IssueEntry) (string, error) {
+	tmpDir := os.TempDir()
+	tmpFile := filepath.Join(tmpDir, fmt.Sprintf("issue-comment-%d.md", issue.Number))
+
+	// ヘッダーコメントとコメント入力欄を書き込み
+	content := fmt.Sprintf(`# Issue #%d へのコメント
+# URL: %s
+#
+# このissueに追加するコメントを記載してください。
+# '#' で始まる行はコメントとして無視されます。
+# ファイルを保存して閉じると、コメントが投稿されます。
+# ========================================
+
+`, issue.Number, issue.URL)
+
+	if err := os.WriteFile(tmpFile, []byte(content), 0600); err != nil {
+		return "", err
+	}
+
+	return tmpFile, nil
+}
+
+// readCommentFromFile はファイルからコメント内容を読み込みます。
+func readCommentFromFile(filepath string) (string, error) {
+	content, err := os.ReadFile(filepath)
+	if err != nil {
+		return "", err
+	}
+
+	// コメント行（# で始まる行）を除去
+	lines := strings.Split(string(content), "\n")
+	var nonCommentLines []string
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if !strings.HasPrefix(trimmed, "#") {
+			nonCommentLines = append(nonCommentLines, line)
+		}
+	}
+
+	return strings.TrimSpace(strings.Join(nonCommentLines, "\n")), nil
+}
+
+// postComment は指定されたissueにコメントを投稿します。
+func postComment(issueNumber int, comment string) error {
+	cmd := exec.Command("gh", "issue", "comment", strconv.Itoa(issueNumber), "--body", comment)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	return cmd.Run()
+}
+
+// closeGitHubIssue は指定されたissueをクローズします。
+func closeGitHubIssue(issueNumber int) error {
+	cmd := exec.Command("gh", "issue", "close", strconv.Itoa(issueNumber))
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	return cmd.Run()
+}
+
 // init は issue-edit コマンドを root コマンドに登録します。
 func init() {
 	rootCmd.AddCommand(issueEditCmd)
 	issueEditCmd.Flags().BoolP("view", "v", false, "閲覧モード（編集せずに表示のみ）")
+	issueEditCmd.Flags().BoolP("comment", "m", false, "コメントを追加")
+	issueEditCmd.Flags().BoolP("close", "c", false, "issueをクローズ")
 }

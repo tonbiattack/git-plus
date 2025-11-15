@@ -58,7 +58,7 @@ if ($LASTEXITCODE -eq 0) {
 # ================================================================================
 # ステップ3: 各コマンド用の実行ファイルをコピー
 # ================================================================================
-# git-plus.exe を28個のgit-xxxコマンド用にコピーします
+# git-plus.exe を29個のgit-xxxコマンド用にコピーします
 # Windowsでは、main.goの実行ファイル名判定機能により、
 # コピーした各実行ファイルが対応するサブコマンドとして動作します
 #
@@ -79,8 +79,9 @@ $commands = @(
     "git-recent",
     "git-step",
     "git-sync",
+    "git-pr-create-merge",
     "git-pr-merge",
-    "git-merge-pr",
+    "git-pr-list",
     "git-pause",
     "git-resume",
     "git-create-repository",

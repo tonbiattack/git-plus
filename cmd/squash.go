@@ -150,7 +150,7 @@ func selectCommitsCount() (int, error) {
 		}
 	}
 
-	input = strings.TrimSpace(input)
+	input = ui.NormalizeNumberInput(input)
 	if input == "0" || input == "" {
 		return 0, nil
 	}

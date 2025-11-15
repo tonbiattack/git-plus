@@ -33,6 +33,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/tonbiattack/git-plus/internal/gitcmd"
+	"github.com/tonbiattack/git-plus/internal/ui"
 )
 
 // BranchInfo はブランチの情報を保持する構造体です。
@@ -97,7 +98,7 @@ var recentCmd = &cobra.Command{
 			return fmt.Errorf("入力の読み込みに失敗しました: %w", err)
 		}
 
-		input = strings.TrimSpace(input)
+		input = ui.NormalizeNumberInput(input)
 		if input == "" {
 			fmt.Println("キャンセルしました。")
 			return nil

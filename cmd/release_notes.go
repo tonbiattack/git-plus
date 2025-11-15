@@ -149,7 +149,7 @@ func selectTagInteractively() (string, error) {
 	var input string
 	fmt.Scanln(&input)
 
-	input = strings.TrimSpace(input)
+	input = ui.NormalizeNumberInput(input)
 	if input == "" {
 		return "", fmt.Errorf("キャンセルされました")
 	}

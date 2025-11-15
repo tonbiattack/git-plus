@@ -17,6 +17,9 @@
 //   - patch/p/bug/b/fix: パッチバージョンアップ（バグ修正）
 // - タグメッセージの指定（-m オプション）
 // - 作成後の自動プッシュ（--push オプション）
+// - プッシュ後の自動リリース作成（--release オプション）
+// - リリースのドラフト作成（--release-draft オプション）
+// - プレリリース作成（--release-prerelease オプション）
 // - ドライラン（--dry-run オプション）
 //
 // 【使用例】
@@ -27,6 +30,8 @@
 //   git-plus new-tag feature --push       # 作成してプッシュ
 //   git-plus new-tag bug -m "Fix issue"   # メッセージ付きで作成
 //   git-plus new-tag minor --dry-run      # 確認のみ
+//   git-plus new-tag feature --push --release              # タグ作成、プッシュ、リリース作成
+//   git-plus new-tag bug --push --release --release-draft  # ドラフトリリースとして作成
 //
 // 【バージョン形式】
 // - 形式: v<major>.<minor>.<patch>
@@ -36,6 +41,7 @@
 package cmd
 
 import (
+	"bytes"
 	"fmt"
 	"os/exec"
 	"regexp"
@@ -47,9 +53,12 @@ import (
 )
 
 var (
-	tagMessage string // タグメッセージ（アノテーテッドタグ用）
-	tagPush    bool   // 作成後に自動的にリモートへプッシュするフラグ
-	tagDryRun  bool   // 実際には作成せず、次のバージョンだけを表示するフラグ
+	tagMessage         string // タグメッセージ（アノテーテッドタグ用）
+	tagPush            bool   // 作成後に自動的にリモートへプッシュするフラグ
+	tagDryRun          bool   // 実際には作成せず、次のバージョンだけを表示するフラグ
+	tagRelease         bool   // プッシュ後に自動的にGitHubリリースを作成するフラグ
+	tagReleaseDraft    bool   // リリースをドラフトとして作成するフラグ
+	tagReleasePrerelease bool   // リリースをプレリリースとして作成するフラグ
 )
 
 // newTagCmd は new-tag コマンドの定義です。
@@ -58,7 +67,8 @@ var newTagCmd = &cobra.Command{
 	Use:   "new-tag [type]",
 	Short: "セマンティックバージョニングに従って新しいタグを作成",
 	Long: `セマンティックバージョニング（SemVer）に従って新しいタグを作成します。
-引数なしで実行すると対話的にバージョンタイプを選択できます。`,
+引数なしで実行すると対話的にバージョンタイプを選択できます。
+--releaseフラグを使用すると、タグプッシュ後に自動的にGitHubリリースも作成できます。`,
 	Example: `  git-plus new-tag                      # 対話的にタイプを選択
   git-plus new-tag feature              # 機能追加（minor）
   git-plus new-tag f                    # 機能追加の省略形
@@ -67,7 +77,9 @@ var newTagCmd = &cobra.Command{
   git-plus new-tag major                # 破壊的変更
   git-plus new-tag feature --push       # 作成してプッシュ
   git-plus new-tag bug -m "Fix issue"   # メッセージ付きで作成
-  git-plus new-tag minor --dry-run      # 確認のみ`,
+  git-plus new-tag minor --dry-run      # 確認のみ
+  git-plus new-tag feature --push --release              # タグ作成、プッシュ、リリース作成
+  git-plus new-tag bug --push --release --release-draft  # ドラフトリリースとして作成`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// 最新タグを取得
 		currentTag, err := getLatestTag()
@@ -142,6 +154,29 @@ var newTagCmd = &cobra.Command{
 				return fmt.Errorf("タグのプッシュに失敗: %w", err)
 			}
 			fmt.Printf("✓ リモートにプッシュしました: %s\n", newTag)
+
+			// --release フラグが指定されている場合、または対話モードで確認された場合にリリースを作成
+			shouldRelease := tagRelease
+			if !tagRelease && len(args) == 0 {
+				// 対話モードの場合はリリースを作成するか確認
+				shouldRelease = ui.Confirm("\nGitHubリリースを作成しますか？", false)
+			}
+
+			if shouldRelease {
+				// GitHub CLI の確認
+				if !checkGitHubCLIInstalled() {
+					fmt.Println("警告: GitHub CLI (gh) がインストールされていないため、リリースを作成できません")
+					fmt.Println("インストール方法: https://cli.github.com/")
+					return nil
+				}
+
+				fmt.Printf("\nGitHubリリースを作成中...\n")
+				if err := createReleaseFromTag(newTag, tagReleaseDraft, tagReleasePrerelease); err != nil {
+					return fmt.Errorf("リリースの作成に失敗: %w", err)
+				}
+				fmt.Printf("✓ GitHubリリースを作成しました\n")
+				fmt.Printf("詳細を確認するには: gh release view %s --web\n", newTag)
+			}
 		}
 
 		return nil
@@ -285,7 +320,7 @@ func interactiveVersionSelection(major, minor, patch int) string {
 	var input string
 	fmt.Scanln(&input)
 
-	switch strings.TrimSpace(input) {
+	switch ui.NormalizeNumberInput(input) {
 	case "1":
 		return "major"
 	case "2":
@@ -336,6 +371,52 @@ func pushTagToRemote(tag string) error {
 	return cmd.Run()
 }
 
+// createReleaseFromTag は指定されたタグからGitHubリリースを作成します。
+//
+// パラメータ:
+//   - tag: リリースを作成するタグ
+//   - draft: ドラフトとして作成するかどうか
+//   - prerelease: プレリリースとして作成するかどうか
+//
+// 戻り値:
+//   - error: エラーが発生した場合のエラー情報
+//
+// 内部処理:
+//   gh release create コマンドで GitHub リリースを作成します。
+//   --generate-notes オプションで自動的にリリースノートを生成します。
+func createReleaseFromTag(tag string, draft, prerelease bool) error {
+	args := []string{"release", "create", tag, "--generate-notes"}
+
+	if draft {
+		args = append(args, "--draft")
+	}
+	if prerelease {
+		args = append(args, "--prerelease")
+	}
+
+	cmd := exec.Command("gh", args...)
+
+	// 出力をキャプチャして表示
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		// エラーメッセージを表示
+		if stderr.Len() > 0 {
+			return fmt.Errorf("%w\n%s", err, stderr.String())
+		}
+		return err
+	}
+
+	// 成功メッセージを表示
+	if stdout.Len() > 0 {
+		fmt.Println(stdout.String())
+	}
+
+	return nil
+}
+
 // init は new-tag コマンドを root コマンドに登録し、フラグを設定します。
 // この関数はパッケージの初期化時に自動的に呼び出されます。
 //
@@ -343,9 +424,15 @@ func pushTagToRemote(tag string) error {
 //   -m, --message: タグメッセージを指定（アノテーテッドタグを作成）
 //   --push: 作成後に自動的にリモートへプッシュ
 //   --dry-run: 実際には作成せず、次のバージョンだけを表示
+//   --release: プッシュ後に自動的にGitHubリリースを作成
+//   --release-draft: リリースをドラフトとして作成
+//   --release-prerelease: リリースをプレリリースとして作成
 func init() {
 	newTagCmd.Flags().StringVarP(&tagMessage, "message", "m", "", "タグメッセージを指定（アノテーテッドタグを作成）")
-	newTagCmd.Flags().BoolVar(&tagPush, "push", false, "作成後に自動的にリモートへプッシュ")
+	newTagCmd.Flags().BoolVarP(&tagPush, "push", "p", false, "作成後に自動的にリモートへプッシュ")
 	newTagCmd.Flags().BoolVar(&tagDryRun, "dry-run", false, "実際には作成せず、次のバージョンだけを表示")
+	newTagCmd.Flags().BoolVar(&tagRelease, "release", false, "プッシュ後に自動的にGitHubリリースを作成")
+	newTagCmd.Flags().BoolVar(&tagReleaseDraft, "release-draft", false, "リリースをドラフトとして作成")
+	newTagCmd.Flags().BoolVar(&tagReleasePrerelease, "release-prerelease", false, "リリースをプレリリースとして作成")
 	rootCmd.AddCommand(newTagCmd)
 }

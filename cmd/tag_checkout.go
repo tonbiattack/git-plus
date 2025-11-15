@@ -104,7 +104,8 @@ var tagCheckoutCmd = &cobra.Command{
 		}
 
 		// 入力を解析
-		selectedIndex, err := strconv.Atoi(strings.TrimSpace(input))
+		input = ui.NormalizeNumberInput(input)
+		selectedIndex, err := strconv.Atoi(input)
 		if err != nil || selectedIndex < 1 || selectedIndex > len(displayTags) {
 			return fmt.Errorf("無効な番号です: %s", input)
 		}
