@@ -78,6 +78,7 @@ Git の日常操作を少しだけ楽にするための拡張コマンド集で�
 
 - `git create-repository` - GitHubリポジトリの作成→クローン→VSCode起動を自動化
 - `git clone-org` - GitHub組織のリポジトリを一括クローン
+- `git batch-clone` - ファイルに記載されたリポジトリをまとめてクローン
 - `git browse` - 現在のリポジトリをブラウザで開く
 - `git repo-others` - ローカルにクローン済みの他人のリポジトリを一覧表示
 
@@ -181,6 +182,7 @@ ln -s git-plus git-new-tag
 ln -s git-plus git-browse
 ln -s git-plus git-pr-checkout
 ln -s git-plus git-clone-org
+ln -s git-plus git-batch-clone
 ln -s git-plus git-back
 ln -s git-plus git-issue-create
 ln -s git-plus git-issue-edit
@@ -229,6 +231,7 @@ Copy-Item "$binPath\git-plus.exe" "$binPath\git-new-tag.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-browse.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-pr-checkout.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-clone-org.exe"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-batch-clone.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-back.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-issue-create.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-issue-edit.exe"

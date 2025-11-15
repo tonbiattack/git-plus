@@ -94,6 +94,7 @@ commands=(
     "git-browse"
     "git-pr-checkout"
     "git-clone-org"
+    "git-batch-clone"
     "git-back"
     "git-issue-create"
     "git-issue-edit"

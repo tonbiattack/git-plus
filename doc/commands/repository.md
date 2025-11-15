@@ -145,6 +145,115 @@ git clone-org myorg -n 3 -s         # 短縮形
 - リポジトリ数が多い場合は時間がかかることがあります
 - リポジトリは `./組織名/` ディレクトリ配下にクローンされます
 
+## git batch-clone
+
+ファイルに記載されたリポジトリURLを一括でクローンします。テキストファイルにリポジトリURLをリストアップしておくことで、複数のリポジトリを効率的にクローンできます。
+
+**使い方:**
+```bash
+git batch-clone <file> [オプション]
+git batch-clone -h                   # ヘルプを表示
+```
+
+**引数:**
+- `file`: リポジトリURLを記載したテキストファイルのパス
+
+**オプション:**
+- `-d, --dir <ディレクトリ>`: クローン先ディレクトリ名（省略時はファイル名が使用されます）
+- `-s, --shallow`: shallow クローンを使用（`--depth=1`）
+- `-h, --help`: ヘルプを表示
+
+**ファイルフォーマット:**
+```
+# マイプロジェクト
+https://github.com/user/repo1
+https://github.com/user/repo2
+
+# アーカイブ
+https://github.com/user/old-repo
+git@github.com:user/private-repo.git
+```
+
+- 1行に1つのリポジトリURL（HTTPSまたはSSH形式）
+- 空行は無視されます
+- `#` で始まる行はコメントとして無視されます
+
+**処理フロー:**
+1. ファイルからリポジトリURLを読み込み
+2. クローン先ディレクトリを作成
+3. 各リポジトリを順次クローン
+   - 既存のリポジトリはスキップ
+   - エラーが発生した場合は続行
+4. 結果を表示
+
+**使用例:**
+```bash
+# repos.txt のリポジトリを "repos" フォルダにクローン
+git batch-clone repos.txt
+
+# "myprojects" フォルダにクローン
+git batch-clone repos.txt --dir myprojects
+git batch-clone repos.txt -d myprojects       # 短縮形
+
+# shallow クローンを使用
+git batch-clone repos.txt --shallow
+git batch-clone repos.txt -s                  # 短縮形
+
+# カスタムフォルダ + shallow クローン
+git batch-clone repos.txt -d proj -s
+```
+
+**実行の流れ:**
+```
+入力ファイル: repos.txt
+クローン先ディレクトリ: repos
+オプション: shallow クローン (--depth=1)
+
+[1/3] リポジトリURLを読み込んでいます...
+✓ 3個のリポジトリURLを読み込みました
+
+クローン対象リポジトリ:
+  1. user/repo1 (https://github.com/user/repo1)
+  2. user/repo2 (https://github.com/user/repo2)
+  3. user/old-repo (https://github.com/user/old-repo)
+
+3個のリポジトリをクローンしますか？
+続行しますか？ (Y/n): y
+
+[2/3] クローン先ディレクトリを作成しています...
+✓ ディレクトリを作成しました: repos
+
+[3/3] リポジトリをクローンしています...
+
+[1/3] user/repo1
+  📥 クローン中...
+  ✅ 完了
+
+[2/3] user/repo2
+  ⏩ スキップ: すでに存在します
+
+[3/3] user/old-repo
+  📥 クローン中...
+  ✅ 完了
+
+✓ すべての処理が完了しました！
+📊 結果: 2個クローン, 1個スキップ, 0個失敗
+```
+
+**主な機能:**
+- **柔軟なURLフォーマット**: HTTPSとSSH形式の両方に対応
+- **コメント対応**: `#` で始まる行をコメントとして使用可能
+- **クローン先カスタマイズ**: デフォルトはファイル名、`--dir` で任意のディレクトリ名を指定可能
+- **重複チェック**: すでに存在するリポジトリは自動的にスキップ
+- **Shallow クローン**: `--shallow` オプションで高速なクローンが可能
+- **進捗表示**: クローン中のリポジトリと結果をリアルタイムで表示
+- **エラーハンドリング**: クローンに失敗した場合でも続行し、最後に結果を表示
+
+**注意事項:**
+- HTTPSとSSH形式の両方のURLに対応していますが、SSH形式を使用する場合は適切なSSH認証の設定が必要です
+- 無効なURL形式の行は警告を表示してスキップされます
+- リポジトリは `<クローン先ディレクトリ>/<リポジトリ名>/` にクローンされます
+
 ## git browse
 
 現在のリポジトリをブラウザで開きます。リポジトリの概要を素早く確認したい場合に便利です。
