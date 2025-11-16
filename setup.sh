@@ -78,6 +78,7 @@ commands=(
     "git-delete-local-branches"
     "git-undo-last-commit"
     "git-tag-diff"
+    "git-tag-diff-all"
     "git-tag-checkout"
     "git-stash-cleanup"
     "git-stash-select"

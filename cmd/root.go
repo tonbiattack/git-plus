@@ -22,17 +22,22 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// rootCmd は、Git Plusのルートコマンドを定義します。
+// RootCmd は、Git Plusのルートコマンドを定義します。
 // すべてのサブコマンド（newbranch, amend, squashなど）は、
-// 各ファイルのinit()関数でこのrootCmdに登録されます。
+// 各サブパッケージのinit()関数でこのRootCmdに登録されます。
 //
 // Cobraのコマンド構造:
-// rootCmd (git plus)
-//   ├── newbranch
-//   ├── amend
-//   ├── squash
-//   └── ...（その他のサブコマンド）
-var rootCmd = &cobra.Command{
+// RootCmd (git plus)
+//   ├── branch/ (newbranch, back, recent, sync, delete-local-branches)
+//   ├── tag/ (reset-tag, tag-diff, new-tag, etc.)
+//   ├── commit/ (amend, squash, undo-last-commit, track)
+//   ├── stash/ (stash-cleanup, stash-select, pause, resume)
+//   ├── pr/ (pr-create-merge, pr-list, pr-merge, pr-checkout)
+//   ├── repo/ (create-repository, clone-org, batch-clone, browse, repo-others)
+//   ├── issue/ (issue-create, issue-edit)
+//   ├── release/ (release-notes)
+//   └── stats/ (step)
+var RootCmd = &cobra.Command{
 	Use:   "plus",
 	Short: "Git の日常操作を少しだけ楽にするための拡張コマンド集",
 	Long: `git plus は Git の日常操作をより簡単にするための拡張コマンド集です。
@@ -56,7 +61,7 @@ PR管理、統計分析など、様々な便利な機能を提供します。
 // エラーが発生した場合は、終了コード1でプロセスを終了します。
 func Execute() {
 	// Cobraコマンドを実行
-	if err := rootCmd.Execute(); err != nil {
+	if err := RootCmd.Execute(); err != nil {
 		// エラーメッセージを標準エラー出力に表示
 		fmt.Fprintln(os.Stderr, err)
 		// 終了コード1でプロセスを終了

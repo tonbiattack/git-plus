@@ -2,6 +2,23 @@
 ~*
 original/*
 bin/
-docs/
 git_time*
 git_step*
+git-plus
+git-*
+gitplus
+tag_diff_all.txt
+
+# Test coverage
+coverage.out
+coverage.html
+
+.mcp.json
+AGENTS.md
+claude.md
+docs
+
+copilot-instructions.md
+.claude
+.vscode
+.serena

@@ -60,7 +60,7 @@ if ($LASTEXITCODE -eq 0) {
 # ================================================================================
 # ステップ3: 各コマンド用の実行ファイルをコピー
 # ================================================================================
-# git-plus.exe を29個のgit-xxxコマンド用にコピーします
+# git-plus.exe を30個のgit-xxxコマンド用にコピーします
 # Windowsでは、main.goの実行ファイル名判定機能により、
 # コピーした各実行ファイルが対応するサブコマンドとして動作します
 #
@@ -75,6 +75,7 @@ $commands = @(
     "git-delete-local-branches",
     "git-undo-last-commit",
     "git-tag-diff",
+    "git-tag-diff-all",
     "git-tag-checkout",
     "git-stash-cleanup",
     "git-stash-select",

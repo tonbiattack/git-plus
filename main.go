@@ -23,6 +23,17 @@ import (
 	"strings"
 
 	"github.com/tonbiattack/git-plus/cmd"
+
+	// サブパッケージをインポートして各コマンドを登録
+	_ "github.com/tonbiattack/git-plus/cmd/branch"
+	_ "github.com/tonbiattack/git-plus/cmd/commit"
+	_ "github.com/tonbiattack/git-plus/cmd/issue"
+	_ "github.com/tonbiattack/git-plus/cmd/pr"
+	_ "github.com/tonbiattack/git-plus/cmd/release"
+	_ "github.com/tonbiattack/git-plus/cmd/repo"
+	_ "github.com/tonbiattack/git-plus/cmd/stash"
+	_ "github.com/tonbiattack/git-plus/cmd/stats"
+	_ "github.com/tonbiattack/git-plus/cmd/tag"
 )
 
 // main は、Git Plusアプリケーションのエントリーポイントです。
