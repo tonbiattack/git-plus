@@ -1,9 +1,11 @@
 package stats
 
 import (
+	"os"
 	"testing"
 
 	"github.com/tonbiattack/git-plus/cmd"
+	"github.com/tonbiattack/git-plus/internal/testutil"
 )
 
 // TestStepCmd_CommandSetup はstepコマンドの設定をテストします
@@ -141,5 +143,199 @@ func TestStepCmd_InRootCmd(t *testing.T) {
 
 	if !found {
 		t.Error("stepCmd should be registered in RootCmd")
+	}
+}
+
+// TestCollectAuthorStats_SingleAuthor は単一作成者の統計収集をテストします
+func TestCollectAuthorStats_SingleAuthor(t *testing.T) {
+	repo := testutil.NewGitRepo(t)
+
+	// 初期コミットを作成
+	repo.CreateFile("README.md", "# Test\nLine 2\nLine 3\n")
+	repo.Commit("Initial commit")
+
+	// 追加のコミットを作成
+	repo.CreateFile("file1.txt", "content\n")
+	repo.Commit("Add file1")
+
+	oldDir, _ := os.Getwd()
+	defer func() { _ = os.Chdir(oldDir) }()
+	if err := os.Chdir(repo.Dir); err != nil {
+		t.Fatalf("Failed to change directory: %v", err)
+	}
+
+	stats := collectAuthorStats("", "", false)
+
+	if len(stats) == 0 {
+		t.Error("collectAuthorStats() returned empty stats")
+		return
+	}
+
+	// 少なくとも1人の作成者がいることを確認
+	if stats[0].Name == "" {
+		t.Error("Author name should not be empty")
+	}
+
+	// コミット数が2以上であることを確認
+	totalCommits := 0
+	for _, s := range stats {
+		totalCommits += s.Commits
+	}
+	if totalCommits < 2 {
+		t.Errorf("Total commits = %d, want >= 2", totalCommits)
+	}
+}
+
+// TestCollectAuthorStats_ExcludeInitial は初回コミット除外をテストします
+func TestCollectAuthorStats_ExcludeInitial(t *testing.T) {
+	repo := testutil.NewGitRepo(t)
+
+	// 初期コミットを作成（大量の行を追加）
+	repo.CreateFile("README.md", "# Test\nLine 2\nLine 3\nLine 4\nLine 5\n")
+	repo.Commit("Initial commit")
+
+	// 追加のコミットを作成
+	repo.CreateFile("file1.txt", "small\n")
+	repo.Commit("Add small file")
+
+	oldDir, _ := os.Getwd()
+	defer func() { _ = os.Chdir(oldDir) }()
+	if err := os.Chdir(repo.Dir); err != nil {
+		t.Fatalf("Failed to change directory: %v", err)
+	}
+
+	// 初回コミットを含める場合
+	statsWithInitial := collectAuthorStats("", "", false)
+
+	// 初回コミットを除外する場合
+	statsWithoutInitial := collectAuthorStats("", "", true)
+
+	// 初回コミットを除外した場合、追加行数が少ないことを確認
+	totalAddedWith := 0
+	for _, s := range statsWithInitial {
+		totalAddedWith += s.Added
+	}
+
+	totalAddedWithout := 0
+	for _, s := range statsWithoutInitial {
+		totalAddedWithout += s.Added
+	}
+
+	if totalAddedWithout >= totalAddedWith {
+		t.Errorf("Excluding initial commit should reduce total added lines: with=%d, without=%d", totalAddedWith, totalAddedWithout)
+	}
+}
+
+// TestGetTotalLines_EmptyRepo は空のリポジトリでの総行数をテストします
+func TestGetTotalLines_EmptyRepo(t *testing.T) {
+	repo := testutil.NewGitRepo(t)
+
+	// 初期コミットを作成
+	repo.CreateFile("README.md", "# Test")
+	repo.Commit("Initial commit")
+
+	oldDir, _ := os.Getwd()
+	defer func() { _ = os.Chdir(oldDir) }()
+	if err := os.Chdir(repo.Dir); err != nil {
+		t.Fatalf("Failed to change directory: %v", err)
+	}
+
+	lines := getTotalLines()
+
+	// 少なくとも1行があることを確認
+	if lines < 1 {
+		t.Errorf("getTotalLines() = %d, want >= 1", lines)
+	}
+}
+
+// TestGetTotalLines_MultipleFiles は複数ファイルの総行数をテストします
+func TestGetTotalLines_MultipleFiles(t *testing.T) {
+	repo := testutil.NewGitRepo(t)
+
+	// 複数のファイルを作成
+	repo.CreateFile("file1.txt", "line1\nline2\nline3\n")
+	repo.CreateFile("file2.txt", "a\nb\n")
+	repo.MustGit("add", ".")
+	repo.Commit("Add files")
+
+	oldDir, _ := os.Getwd()
+	defer func() { _ = os.Chdir(oldDir) }()
+	if err := os.Chdir(repo.Dir); err != nil {
+		t.Fatalf("Failed to change directory: %v", err)
+	}
+
+	lines := getTotalLines()
+
+	// file1.txt: 3行, file2.txt: 2行 = 合計5行
+	if lines != 5 {
+		t.Errorf("getTotalLines() = %d, want %d", lines, 5)
+	}
+}
+
+// TestGetValidCommits_AllCommits は全コミットの取得をテストします
+func TestGetValidCommits_AllCommits(t *testing.T) {
+	repo := testutil.NewGitRepo(t)
+
+	// 複数のコミットを作成
+	repo.CreateFile("file1.txt", "content1")
+	repo.Commit("Commit 1")
+
+	repo.CreateFile("file2.txt", "content2")
+	repo.Commit("Commit 2")
+
+	repo.CreateFile("file3.txt", "content3")
+	repo.Commit("Commit 3")
+
+	oldDir, _ := os.Getwd()
+	defer func() { _ = os.Chdir(oldDir) }()
+	if err := os.Chdir(repo.Dir); err != nil {
+		t.Fatalf("Failed to change directory: %v", err)
+	}
+
+	commits := getValidCommits("", "")
+
+	// 3つのコミットが存在することを確認
+	if len(commits) != 3 {
+		t.Errorf("getValidCommits() returned %d commits, want %d", len(commits), 3)
+	}
+
+	// すべてのコミットハッシュが40文字であることを確認
+	for hash := range commits {
+		if len(hash) != 40 {
+			t.Errorf("Commit hash %q should be 40 characters", hash)
+		}
+	}
+}
+
+// TestGetCodeByAuthor_SingleAuthor は単一作成者のコード貢献をテストします
+func TestGetCodeByAuthor_SingleAuthor(t *testing.T) {
+	repo := testutil.NewGitRepo(t)
+
+	// ファイルを作成してコミット
+	repo.CreateFile("file1.txt", "line1\nline2\nline3\n")
+	repo.Commit("Add file")
+
+	oldDir, _ := os.Getwd()
+	defer func() { _ = os.Chdir(oldDir) }()
+	if err := os.Chdir(repo.Dir); err != nil {
+		t.Fatalf("Failed to change directory: %v", err)
+	}
+
+	authorLines := getCodeByAuthor("", "")
+
+	// 少なくとも1人の作成者がいることを確認
+	if len(authorLines) == 0 {
+		t.Error("getCodeByAuthor() returned empty map")
+		return
+	}
+
+	// 合計行数が3であることを確認
+	totalLines := 0
+	for _, lines := range authorLines {
+		totalLines += lines
+	}
+
+	if totalLines != 3 {
+		t.Errorf("Total lines by author = %d, want %d", totalLines, 3)
 	}
 }

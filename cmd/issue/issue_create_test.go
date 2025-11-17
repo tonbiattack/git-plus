@@ -46,3 +46,52 @@ func TestIssueCreateCmd_HasRunE(t *testing.T) {
 		t.Error("issueCreateCmd.RunE should not be nil")
 	}
 }
+
+// TestExtractIssueNumber はextractIssueNumber関数をテストします
+func TestExtractIssueNumber(t *testing.T) {
+	tests := []struct {
+		name     string
+		url      string
+		expected string
+	}{
+		{
+			name:     "standard GitHub issue URL",
+			url:      "https://github.com/user/repo/issues/123",
+			expected: "123",
+		},
+		{
+			name:     "issue number with multiple digits",
+			url:      "https://github.com/org/project/issues/45678",
+			expected: "45678",
+		},
+		{
+			name:     "issue number 1",
+			url:      "https://github.com/test/test/issues/1",
+			expected: "1",
+		},
+		{
+			name:     "invalid URL without issue number",
+			url:      "https://github.com/user/repo/pulls/123",
+			expected: "",
+		},
+		{
+			name:     "empty URL",
+			url:      "",
+			expected: "",
+		},
+		{
+			name:     "URL with trailing slash",
+			url:      "https://github.com/user/repo/issues/123/",
+			expected: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := extractIssueNumber(tt.url)
+			if result != tt.expected {
+				t.Errorf("extractIssueNumber(%q) = %q, want %q", tt.url, result, tt.expected)
+			}
+		})
+	}
+}

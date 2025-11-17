@@ -8,7 +8,7 @@ Git の日常操作を少しだけ楽にするための拡張コマンド集で�
 
 - **Git の拡張コマンド**: `git-xxx` 形式のシンボリックリンクにより、`git xxx` として自然に呼び出せる
 - **単一バイナリ**: Go で実装された単一のバイナリから、すべてのコマンドが利用可能
-- **豊富なコマンド**: ブランチ、タグ、コミット、スタッシュ、PR、Issue など31個のコマンド
+- **豊富なコマンド**: ブランチ、タグ、コミット、スタッシュ、PR、Issue などの多様なコマンド
 - **対話的な操作**: 多くのコマンドが対話的な選択を提供し、安全で直感的に操作可能
 - **GitHub CLI 連携**: プルリクエスト、Issue、リリースなどで GitHub CLI と連携
 
@@ -70,6 +70,8 @@ Git の日常操作を少しだけ楽にするための拡張コマンド集で�
 - `git pr-list` - プルリクエスト一覧を表示（`gh pr list` のラッパー）
 - `git pr-merge` - プルリクエストをマージ（`gh pr merge` のラッパー）
 - `git pr-checkout` - 最新または指定されたPRをチェックアウト
+- `git pr-browse` - プルリクエストをブラウザで開く（`gh pr view --web` のラッパー）
+- `git pr-issue-link` - PRとIssueを紐づけて作成（Closes #番号を自動追加）
 
 [詳細はこちら](doc/commands/pull-request.md)
 
@@ -89,8 +91,10 @@ Git の日常操作を少しだけ楽にするための拡張コマンド集で�
 
 GitHubのIssueの作成、編集、閲覧など。
 
+- `git issue-list` - Issueの一覧から詳細表示・編集・コメント追加・クローズ・一括クローズ・新規作成を統合操作
 - `git issue-create` - エディタでIssueを作成
 - `git issue-edit` - Issueの一覧を表示して編集/閲覧/コメント追加/クローズ
+- `git issue-bulk-close` - 複数のIssueを同じコメントで一括クローズ
 
 [詳細はこちら](doc/commands/issue.md)
 
@@ -109,6 +113,16 @@ GitHubリリースノートの自動生成など。
 - `git step` - リポジトリ全体のステップ数とユーザーごとの貢献度を11の指標で集計
 
 [詳細はこちら](doc/commands/stats.md)
+
+### ワークツリー操作
+
+git worktreeを使った並行開発の支援。
+
+- `git worktree-new` - 新しいブランチをworktreeとして別ディレクトリに作成しVSCodeを開く
+- `git worktree-switch` - 既存worktreeの一覧から選択してVSCodeを開く
+- `git worktree-delete` - 既存worktreeの一覧から選択して削除
+
+[詳細はこちら](doc/commands/worktree.md)
 
 ## インストール
 
@@ -141,7 +155,7 @@ cd git-plus
 - git-plus バイナリのビルド
 - `~/bin`（Windows: `%USERPROFILE%\bin`）への配置
 - 各コマンド用のシンボリックリンク作成（Linux/macOS）またはコピー作成（Windows）
-  - `git-newbranch`, `git-reset-tag`, `git-amend` など28個のコマンド
+  - `git-newbranch`, `git-reset-tag`, `git-amend` などのコマンド
 - PATH環境変数への追加
 
 これにより、`git newbranch`、`git step` などの形式でコマンドを呼び出せます。
@@ -186,10 +200,17 @@ ln -s git-plus git-pr-checkout
 ln -s git-plus git-clone-org
 ln -s git-plus git-batch-clone
 ln -s git-plus git-back
+ln -s git-plus git-issue-list
 ln -s git-plus git-issue-create
 ln -s git-plus git-issue-edit
+ln -s git-plus git-issue-bulk-close
 ln -s git-plus git-release-notes
 ln -s git-plus git-repo-others
+ln -s git-plus git-pr-browse
+ln -s git-plus git-pr-issue-link
+ln -s git-plus git-worktree-new
+ln -s git-plus git-worktree-switch
+ln -s git-plus git-worktree-delete
 
 # PATHに追加（まだ追加していない場合）
 echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
@@ -236,10 +257,17 @@ Copy-Item "$binPath\git-plus.exe" "$binPath\git-pr-checkout.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-clone-org.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-batch-clone.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-back.exe"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-issue-list.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-issue-create.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-issue-edit.exe"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-issue-bulk-close.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-release-notes.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-repo-others.exe"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-pr-browse.exe"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-pr-issue-link.exe"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-worktree-new.exe"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-worktree-switch.exe"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-worktree-delete.exe"
 
 # PATHに追加（まだ追加していない場合）
 # システム環境変数に追加する場合は管理者権限で実行
@@ -362,8 +390,10 @@ Remove-Item -Recurse -Force "C:\path\to\git-plus"
 │   │   ├── stash_cleanup.go
 │   │   └── stash_select.go
 │   ├── pr/                # プルリクエストコマンド
+│   │   ├── pr_browse.go
 │   │   ├── pr_checkout.go
 │   │   ├── pr_create_merge.go
+│   │   ├── pr_issue_link.go
 │   │   ├── pr_list.go
 │   │   └── pr_merge.go
 │   ├── repo/              # リポジトリ管理コマンド
@@ -373,12 +403,18 @@ Remove-Item -Recurse -Force "C:\path\to\git-plus"
 │   │   ├── create_repository.go
 │   │   └── repo_others.go
 │   ├── issue/             # Issue管理コマンド
+│   │   ├── issue_bulk_close.go
 │   │   ├── issue_create.go
-│   │   └── issue_edit.go
+│   │   ├── issue_edit.go
+│   │   └── issue_list.go
 │   ├── release/           # リリース管理コマンド
 │   │   └── release_notes.go
-│   └── stats/             # 統計・分析コマンド
-│       └── step.go
+│   ├── stats/             # 統計・分析コマンド
+│   │   └── step.go
+│   └── worktree/          # ワークツリー操作コマンド
+│       ├── worktree_delete.go
+│       ├── worktree_new.go
+│       └── worktree_switch.go
 ├── internal/              # 内部共通パッケージ
 │   ├── gitcmd/           # Gitコマンド実行の共通ユーティリティ
 │   ├── ui/               # UI関連のユーティリティ

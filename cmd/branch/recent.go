@@ -92,22 +92,28 @@ var recentCmd = &cobra.Command{
 		}
 
 		// ブランチ選択
-		fmt.Print("\nSelect branch (番号を入力): ")
 		reader := bufio.NewReader(os.Stdin)
-		input, err := reader.ReadString('\n')
-		if err != nil {
-			return fmt.Errorf("入力の読み込みに失敗しました: %w", err)
-		}
+		var selection int
+		for {
+			fmt.Print("\nSelect branch (番号を入力): ")
+			input, err := reader.ReadString('\n')
+			if err != nil {
+				return fmt.Errorf("入力の読み込みに失敗しました: %w", err)
+			}
 
-		input = ui.NormalizeNumberInput(input)
-		if input == "" {
-			fmt.Println("キャンセルしました。")
-			return nil
-		}
+			input = ui.NormalizeNumberInput(input)
+			if input == "" {
+				fmt.Println("キャンセルしました。")
+				return nil
+			}
 
-		selection, err := strconv.Atoi(input)
-		if err != nil || selection < 1 || selection > displayCount {
-			return fmt.Errorf("無効な番号です。1から%dの範囲で入力してください", displayCount)
+			var parseErr error
+			selection, parseErr = strconv.Atoi(input)
+			if parseErr != nil || selection < 1 || selection > displayCount {
+				fmt.Printf("無効な番号です。1から%dの範囲で入力してください。\n", displayCount)
+				continue
+			}
+			break
 		}
 
 		// 選択されたブランチを取得

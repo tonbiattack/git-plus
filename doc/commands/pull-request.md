@@ -260,3 +260,140 @@ git resume
 - 既に pause 状態の場合は上書き確認が表示されます
 - チェックアウト後は `git resume` で元のブランチに戻ることができます
 - PRブランチで作業した内容は通常通りコミット・プッシュできます
+
+## git pr-browse
+
+プルリクエストをブラウザで開きます。`gh pr view --web` のラッパーです。
+
+```bash
+git pr-browse [PR番号] [オプション]
+git pr-browse -h             # ヘルプを表示
+```
+
+**使用例:**
+
+```bash
+# カレントブランチのPRをブラウザで開く
+git pr-browse
+
+# PR番号を指定してブラウザで開く
+git pr-browse 123
+```
+
+**前提条件:**
+- GitHub CLI (gh) がインストールされていること
+- `gh auth login`でログイン済みであること
+
+## git pr-issue-link
+
+PRを作成する際にGitHubのIssueと紐づけます。PRの説明欄に「Closes #番号」を自動的に追加することで、PRがマージされた際に関連するIssueが自動的にクローズされます。
+
+```bash
+git pr-issue-link [オプション]
+git pr-issue-link -h                    # ヘルプを表示
+```
+
+**主な機能:**
+- **Issue一覧表示**: オープンなIssueの一覧を表示し、対話的に選択可能
+- **複数Issue対応**: 複数のIssueを同時に紐づけることが可能
+- **自動クローズ**: PRマージ時に紐づけられたIssueが自動的にクローズ
+- **柔軟な指定方法**: 対話的選択またはコマンドラインオプションで指定
+
+**使用例:**
+
+```bash
+# 対話的にIssueを選択してPR作成
+git pr-issue-link
+
+# ベースブランチを指定
+git pr-issue-link --base main
+git pr-issue-link -b develop
+
+# Issue番号を直接指定
+git pr-issue-link --issue 123
+git pr-issue-link -i 42
+
+# 複数のIssueを指定（カンマ区切り）
+git pr-issue-link --issue 123,456,789
+
+# タイトルを指定
+git pr-issue-link --title "Fix authentication bug"
+git pr-issue-link -t "Add new feature"
+
+# 本文を指定（Closes #番号は自動追加）
+git pr-issue-link --body "This PR fixes the login issue"
+
+# 複数オプションを組み合わせ
+git pr-issue-link -b main -i 42 -t "Fix #42: Authentication bug"
+```
+
+**対話的な操作例:**
+
+```bash
+git pr-issue-link
+
+# 現在のブランチ: feature/fix-auth
+# マージ先のベースブランチを入力してください (デフォルト: main):
+# ベースブランチ: main
+
+# オープンなIssue一覧 (3 個):
+
+# 1. #42: Authentication fails on mobile
+#    Users report login issues...
+
+# 2. #38: Performance improvement needed
+#    The API response time...
+
+# 3. #35: Add dark mode support
+#    Users have requested...
+
+# 紐づけるIssueを選択してください:
+#   番号: 単一のIssueを選択
+#   1,3,5: 複数のIssueを選択（カンマ区切り）
+#   all: すべてのIssueを選択
+#   none: Issueを紐づけない
+
+# 入力: 1
+
+# PRのタイトルを入力してください (空の場合はコミットから自動生成): Fix authentication on mobile
+
+# ========================================
+# ベースブランチ: main
+# ヘッドブランチ: feature/fix-auth
+# タイトル: Fix authentication on mobile
+# 紐づけるIssue: #42
+
+# --- PR本文 ---
+# Closes #42
+# ========================================
+
+# PRを作成しますか？ (Y/n): y
+
+# PRを作成しています...
+
+# ✓ PRを作成しました
+# URL: https://github.com/user/repo/pull/89
+
+# 紐づけられたIssue:
+#   - Issue #42 (PRマージ時に自動クローズされます)
+```
+
+**オプション:**
+
+| オプション | 短縮形 | 説明 |
+|----------|--------|------|
+| `--base <branch>` | `-b` | マージ先のベースブランチ |
+| `--issue <numbers>` | `-i` | 紐づけるIssue番号（カンマ区切りで複数指定可能） |
+| `--title <text>` | `-t` | PRのタイトル |
+| `--body <text>` | - | PRの本文（Closes #番号は自動追加） |
+
+**前提条件:**
+- GitHub CLI (gh) がインストールされていること
+- `gh auth login`でログイン済みであること
+- リモートリポジトリへのプッシュ権限があること
+
+**注意事項:**
+- PRの本文には自動的に「Closes #番号」が追加されます
+- GitHubの仕様により、PRがデフォルトブランチにマージされると紐づけられたIssueが自動的にクローズされます
+- 複数のIssueを紐づける場合、すべてのIssueが自動クローズされます
+- タイトルを指定しない場合は、`--fill`オプションと同様にコミットメッセージから自動生成されます

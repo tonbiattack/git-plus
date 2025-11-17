@@ -4,7 +4,7 @@
 # このスクリプトは以下の処理を実行します：
 # 1. ユーザーディレクトリに bin フォルダを作成
 # 2. git-plus.exe をビルド
-# 3. 28個のgit拡張コマンド用に実行ファイルをコピー
+# 3. 36個のgit拡張コマンド用に実行ファイルをコピー
 # 4. ユーザーのPATH環境変数にbinディレクトリを追加
 #
 # これにより、git newbranch、git pr-merge などのコマンドが使用可能になります。
@@ -60,7 +60,7 @@ if ($LASTEXITCODE -eq 0) {
 # ================================================================================
 # ステップ3: 各コマンド用の実行ファイルをコピー
 # ================================================================================
-# git-plus.exe を30個のgit-xxxコマンド用にコピーします
+# git-plus.exe を36個のgit-xxxコマンド用にコピーします
 # Windowsでは、main.goの実行ファイル名判定機能により、
 # コピーした各実行ファイルが対応するサブコマンドとして動作します
 #
@@ -94,10 +94,17 @@ $commands = @(
     "git-clone-org",
     "git-batch-clone",
     "git-back",
+    "git-issue-list",
     "git-issue-create",
     "git-issue-edit",
+    "git-issue-bulk-close",
     "git-release-notes",
-    "git-repo-others"
+    "git-repo-others",
+    "git-pr-browse",
+    "git-pr-issue-link",
+    "git-worktree-new",
+    "git-worktree-switch",
+    "git-worktree-delete"
 )
 
 Write-Host ""

@@ -5,7 +5,7 @@
 # このスクリプトは以下の処理を実行します：
 # 1. ホームディレクトリに ~/bin フォルダを作成
 # 2. git-plus バイナリをビルド
-# 3. 28個のgit拡張コマンド用にシンボリックリンクを作成
+# 3. 36個のgit拡張コマンド用にシンボリックリンクを作成
 # 4. シェル設定ファイル（.zshrc/.bashrc/.profile）にPATHを追加
 #
 # これにより、git newbranch、git pr-merge などのコマンドが使用可能になります。
@@ -60,7 +60,7 @@ fi
 # ================================================================================
 # ステップ3: 各コマンド用のシンボリックリンクを作成
 # ================================================================================
-# git-plus バイナリへの29個のシンボリックリンクを作成します
+# git-plus バイナリへの36個のシンボリックリンクを作成します
 # Unix系OSでは、main.goの実行ファイル名判定機能により、
 # シンボリックリンク名から対応するサブコマンドが推測されて実行されます
 #
@@ -97,10 +97,17 @@ commands=(
     "git-clone-org"
     "git-batch-clone"
     "git-back"
+    "git-issue-list"
     "git-issue-create"
     "git-issue-edit"
+    "git-issue-bulk-close"
     "git-release-notes"
     "git-repo-others"
+    "git-pr-browse"
+    "git-pr-issue-link"
+    "git-worktree-new"
+    "git-worktree-switch"
+    "git-worktree-delete"
 )
 
 echo ""

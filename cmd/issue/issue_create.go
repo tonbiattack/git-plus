@@ -30,6 +30,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -68,13 +69,23 @@ var issueCreateCmd = &cobra.Command{
 			return fmt.Errorf("issueの作成に失敗しました: %w", err)
 		}
 
-		fmt.Printf("✓ issueを作成しました\n")
+		// イシュー番号を抽出
+		issueNumber := extractIssueNumber(issueURL)
+		if issueNumber != "" {
+			fmt.Printf("✓ Issue #%s: %s を作成しました\n", issueNumber, content.Title)
+		} else {
+			fmt.Printf("✓ issueを作成しました\n")
+		}
 		fmt.Printf("URL: %s\n", issueURL)
+		if content.Body != "" {
+			fmt.Printf("\n--- 本文 ---\n%s\n", content.Body)
+		}
 		return nil
 	},
 }
 
 // createIssueInEditor はエディタで新しいissueの題名と本文を入力します。
+// エディタがキャンセルされた場合や、内容が変更されていない場合はエラーを返します。
 func createIssueInEditor() (*IssueContent, error) {
 	// エディタを取得
 	editor, err := getEditor()
@@ -91,7 +102,12 @@ func createIssueInEditor() (*IssueContent, error) {
 
 	// エディタで編集
 	fmt.Printf("エディタで新しいissueを作成中... (%s)\n", editor)
+	fmt.Println("ヒント: エディタを保存せずに閉じるか、題名を空のままにするとキャンセルされます")
 	if err := openEditor(editor, tmpFile); err != nil {
+		// エディタがキャンセルされた場合
+		if strings.Contains(err.Error(), "キャンセル") {
+			return nil, fmt.Errorf("issueの作成がキャンセルされました")
+		}
 		return nil, fmt.Errorf("エディタの起動に失敗: %w", err)
 	}
 
@@ -142,6 +158,18 @@ func createIssue(title, body string) (string, error) {
 	// gh issue create の出力からURLを取得
 	issueURL := strings.TrimSpace(string(output))
 	return issueURL, nil
+}
+
+// extractIssueNumber はイシューURLからイシュー番号を抽出します。
+// 例: https://github.com/user/repo/issues/123 -> "123"
+func extractIssueNumber(issueURL string) string {
+	// GitHub issue URL パターン: .../issues/番号
+	re := regexp.MustCompile(`/issues/(\d+)$`)
+	matches := re.FindStringSubmatch(issueURL)
+	if len(matches) >= 2 {
+		return matches[1]
+	}
+	return ""
 }
 
 // init は issue-create コマンドを root コマンドに登録します。

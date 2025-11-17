@@ -34,6 +34,7 @@ import (
 	_ "github.com/tonbiattack/git-plus/cmd/stash"
 	_ "github.com/tonbiattack/git-plus/cmd/stats"
 	_ "github.com/tonbiattack/git-plus/cmd/tag"
+	_ "github.com/tonbiattack/git-plus/cmd/worktree"
 )
 
 // main は、Git Plusアプリケーションのエントリーポイントです。

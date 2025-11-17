@@ -95,23 +95,28 @@ var tagCheckoutCmd = &cobra.Command{
 		fmt.Println()
 
 		// タグを選択
-		fmt.Print("チェックアウトするタグの番号を入力してください (Enterでキャンセル): ")
-		var input string
-		_, _ = fmt.Scanln(&input)
+		var selectedTag string
+		for {
+			fmt.Print("チェックアウトするタグの番号を入力してください (Enterでキャンセル): ")
+			var input string
+			_, _ = fmt.Scanln(&input)
 
-		if input == "" {
-			fmt.Println("キャンセルしました")
-			return nil
+			if input == "" {
+				fmt.Println("キャンセルしました")
+				return nil
+			}
+
+			// 入力を解析
+			input = ui.NormalizeNumberInput(input)
+			selectedIndex, err := strconv.Atoi(input)
+			if err != nil || selectedIndex < 1 || selectedIndex > len(displayTags) {
+				fmt.Printf("無効な番号です。1から%dの範囲で入力してください。\n", len(displayTags))
+				continue
+			}
+
+			selectedTag = displayTags[selectedIndex-1]
+			break
 		}
-
-		// 入力を解析
-		input = ui.NormalizeNumberInput(input)
-		selectedIndex, err := strconv.Atoi(input)
-		if err != nil || selectedIndex < 1 || selectedIndex > len(displayTags) {
-			return fmt.Errorf("無効な番号です: %s", input)
-		}
-
-		selectedTag := displayTags[selectedIndex-1]
 
 		// 確認プロンプト
 		if !ui.Confirm(fmt.Sprintf("タグ '%s' にチェックアウトしますか？", selectedTag), true) {

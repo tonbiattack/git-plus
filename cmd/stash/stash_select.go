@@ -61,21 +61,27 @@ drop（削除）、show（差分表示）などの操作を実行できます。
 
 		// スタッシュを選択
 		reader := bufio.NewReader(os.Stdin)
-		fmt.Print("選択してください (番号を入力、Enterでキャンセル): ")
-		input, err := reader.ReadString('\n')
-		if err != nil {
-			return fmt.Errorf("入力の読み込みに失敗しました: %w", err)
-		}
+		var selection int
+		for {
+			fmt.Print("選択してください (番号を入力、Enterでキャンセル): ")
+			input, err := reader.ReadString('\n')
+			if err != nil {
+				return fmt.Errorf("入力の読み込みに失敗しました: %w", err)
+			}
 
-		input = strings.TrimSpace(input)
-		if input == "" {
-			fmt.Println("キャンセルしました。")
-			return nil
-		}
+			input = strings.TrimSpace(input)
+			if input == "" {
+				fmt.Println("キャンセルしました。")
+				return nil
+			}
 
-		selection, err := strconv.Atoi(input)
-		if err != nil || selection < 1 || selection > len(stashes) {
-			return fmt.Errorf("無効な番号です。1から%dの範囲で入力してください", len(stashes))
+			var parseErr error
+			selection, parseErr = strconv.Atoi(input)
+			if parseErr != nil || selection < 1 || selection > len(stashes) {
+				fmt.Printf("無効な番号です。1から%dの範囲で入力してください。\n", len(stashes))
+				continue
+			}
+			break
 		}
 
 		selectedStash := stashes[selection-1]

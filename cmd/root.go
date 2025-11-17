@@ -34,7 +34,7 @@ import (
 //   ├── stash/ (stash-cleanup, stash-select, pause, resume)
 //   ├── pr/ (pr-create-merge, pr-list, pr-merge, pr-checkout)
 //   ├── repo/ (create-repository, clone-org, batch-clone, browse, repo-others)
-//   ├── issue/ (issue-create, issue-edit)
+//   ├── issue/ (issue-list, issue-create, issue-edit)
 //   ├── release/ (release-notes)
 //   └── stats/ (step)
 var RootCmd = &cobra.Command{

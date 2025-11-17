@@ -140,36 +140,45 @@ func selectCommitsCount() (int, error) {
 		fmt.Printf("  %d. %s %s\n", i+1, c.hash[:8], c.subject)
 	}
 
-	fmt.Print("\nスカッシュするコミット数を入力してください (2以上、0で中止): ")
 	reader := bufio.NewReader(os.Stdin)
-	input, err := reader.ReadString('\n')
-	if err != nil {
-		if err == io.EOF {
-			input = "0"
-		} else {
-			return 0, fmt.Errorf("入力の読み込みに失敗しました: %w", err)
+	for {
+		fmt.Print("\nスカッシュするコミット数を入力してください (2以上、0で中止): ")
+		input, err := reader.ReadString('\n')
+		if err != nil {
+			if err == io.EOF {
+				input = "0"
+			} else {
+				return 0, fmt.Errorf("入力の読み込みに失敗しました: %w", err)
+			}
 		}
-	}
 
-	input = ui.NormalizeNumberInput(input)
-	if input == "0" || input == "" {
-		return 0, nil
-	}
+		input = ui.NormalizeNumberInput(input)
+		if input == "0" || input == "" {
+			return 0, nil
+		}
 
-	num, err := strconv.Atoi(input)
-	if err != nil {
-		return 0, fmt.Errorf("数値として解釈できません: %s", input)
-	}
+		num, err := strconv.Atoi(input)
+		if err != nil {
+			fmt.Printf("数値として解釈できません: %s\n", input)
+			continue
+		}
 
-	if num < 0 {
-		return 0, nil
-	}
+		if num < 0 {
+			return 0, nil
+		}
 
-	if num > len(commits) {
-		return 0, fmt.Errorf("指定された数が利用可能なコミット数を超えています（最大: %d）", len(commits))
-	}
+		if num < 2 {
+			fmt.Println("スカッシュするには最低2つのコミットが必要です。")
+			continue
+		}
 
-	return num, nil
+		if num > len(commits) {
+			fmt.Printf("指定された数が利用可能なコミット数を超えています（最大: %d）\n", len(commits))
+			continue
+		}
+
+		return num, nil
+	}
 }
 
 // getRecentCommitsList は最近のコミット一覧を取得します。
