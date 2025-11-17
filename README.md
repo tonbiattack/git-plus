@@ -419,12 +419,18 @@ Remove-Item -Recurse -Force "C:\path\to\git-plus"
 │   ├── gitcmd/           # Gitコマンド実行の共通ユーティリティ
 │   ├── ui/               # UI関連のユーティリティ
 │   └── pausestate/       # pause/resume状態管理
-├── docs/                  # ドキュメント
-│   └── commands/         # コマンド別ドキュメント
+├── doc/                  # READMEや社内向けのコマンドリファレンス
+│   └── commands/         # カテゴリ別ドキュメント
+├── docs/                  # 公開リポジトリに同期されるドキュメント
+│   └── commands/         # 公開用ドキュメント
 ├── main.go               # エントリーポイント
 ├── bin/                  # ビルド済みバイナリ
 └── go.mod
 ```
+
+補足:
+- `doc/` 配下がこのリポジトリの一次ソースであり、READMEや開発作業から直接リンクされています。
+- `docs/` は public リポジトリに同期される公開ドキュメントです。公開向けの調整が必要なときのみ編集します。
 
 ### 共通パッケージ
 
