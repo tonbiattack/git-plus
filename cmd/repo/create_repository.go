@@ -8,6 +8,7 @@ Package repo は git の拡張コマンドのうち、リポジトリ関連の�
   - GitHub リポジトリの作成（public/private 選択可能）
   - リポジトリの説明文の設定
   - 作成したリポジトリのクローン
+  - main ブランチの作成とデフォルトブランチへの設定
   - VSCode の自動起動
 
 使用例:
@@ -37,7 +38,9 @@ var createRepositoryCmd = &cobra.Command{
   1. GitHubにリモートリポジトリを作成（public/private選択可能、Description指定可能）
   2. 作成したリポジトリをクローン
   3. クローンしたディレクトリに移動
-  4. VSCodeでプロジェクトを開く`,
+  4. mainブランチを作成し初期コミットを実行
+  5. mainブランチをリモートにプッシュしデフォルトブランチに設定
+  6. VSCodeでプロジェクトを開く`,
 	Example: `  git create-repository my-new-project`,
 	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -61,7 +64,7 @@ var createRepositoryCmd = &cobra.Command{
 		}
 
 		// Step 1: GitHubリポジトリを作成
-		fmt.Println("\n[1/4] GitHubにリポジトリを作成しています...")
+		fmt.Println("\n[1/6] GitHubにリポジトリを作成しています...")
 		repoURL, err := createGitHubRepository(repoName, visibility, description)
 		if err != nil {
 			return fmt.Errorf("リポジトリの作成に失敗しました: %w", err)
@@ -69,14 +72,14 @@ var createRepositoryCmd = &cobra.Command{
 		fmt.Printf("✓ リポジトリを作成しました: %s\n", repoURL)
 
 		// Step 2: リポジトリをクローン
-		fmt.Println("\n[2/4] リポジトリをクローンしています...")
+		fmt.Println("\n[2/6] リポジトリをクローンしています...")
 		if err := cloneRepo(repoURL); err != nil {
 			return fmt.Errorf("クローンに失敗しました: %w", err)
 		}
 		fmt.Println("✓ リポジトリをクローンしました")
 
 		// Step 3: クローンしたディレクトリに移動
-		fmt.Println("\n[3/4] ディレクトリに移動しています...")
+		fmt.Println("\n[3/6] ディレクトリに移動しています...")
 		cloneDir := filepath.Join(".", repoName)
 		if err := os.Chdir(cloneDir); err != nil {
 			return fmt.Errorf("ディレクトリの移動に失敗しました: %w", err)
@@ -84,8 +87,22 @@ var createRepositoryCmd = &cobra.Command{
 		currentDir, _ := os.Getwd()
 		fmt.Printf("✓ ディレクトリに移動しました: %s\n", currentDir)
 
-		// Step 4: VSCodeを開く
-		fmt.Println("\n[4/4] VSCodeを開いています...")
+		// Step 4: mainブランチを作成し初期コミットを実行
+		fmt.Println("\n[4/6] mainブランチを作成し初期コミットを実行しています...")
+		if err := createInitialCommit(repoName); err != nil {
+			return fmt.Errorf("初期コミットの作成に失敗しました: %w", err)
+		}
+		fmt.Println("✓ mainブランチを作成し初期コミットを実行しました")
+
+		// Step 5: mainブランチをリモートにプッシュしデフォルトブランチに設定
+		fmt.Println("\n[5/6] mainブランチをリモートにプッシュしています...")
+		if err := pushAndSetDefaultBranch(repoName); err != nil {
+			return fmt.Errorf("mainブランチのプッシュに失敗しました: %w", err)
+		}
+		fmt.Println("✓ mainブランチをリモートにプッシュしデフォルトブランチに設定しました")
+
+		// Step 6: VSCodeを開く
+		fmt.Println("\n[6/6] VSCodeを開いています...")
 		if err := launchVSCode(); err != nil {
 			fmt.Printf("警告: VSCodeの起動に失敗しました: %v\n", err)
 			fmt.Println("手動で 'code .' を実行してください。")
@@ -192,10 +209,76 @@ func cloneRepo(repoURL string) error {
 	return gitCmd.Run()
 }
 
+// createInitialCommit は main ブランチを作成し、README.md を含む初期コミットを実行します。
+//
+// パラメータ:
+//
+//	repoName: リポジトリ名（README に使用）
+//
+// 戻り値:
+//
+//	error: エラーが発生した場合はエラーオブジェクト
+func createInitialCommit(repoName string) error {
+	// main ブランチを作成
+	checkoutCmd := exec.Command("git", "checkout", "-b", "main")
+	if output, err := checkoutCmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("mainブランチの作成に失敗しました: %v: %s", err, string(output))
+	}
+
+	// README.md を作成
+	readmeContent := fmt.Sprintf("# %s\n", repoName)
+	if err := os.WriteFile("README.md", []byte(readmeContent), 0644); err != nil {
+		return fmt.Errorf("README.mdの作成に失敗しました: %w", err)
+	}
+
+	// README.md をステージング
+	addCmd := exec.Command("git", "add", "README.md")
+	if output, err := addCmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("ファイルのステージングに失敗しました: %v: %s", err, string(output))
+	}
+
+	// 初期コミットを実行
+	commitCmd := exec.Command("git", "commit", "-m", "Initial commit")
+	if output, err := commitCmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("初期コミットに失敗しました: %v: %s", err, string(output))
+	}
+
+	return nil
+}
+
+// pushAndSetDefaultBranch は main ブランチをリモートにプッシュし、
+// GitHub でデフォルトブランチとして設定します。
+//
+// パラメータ:
+//
+//	repoName: リポジトリ名
+//
+// 戻り値:
+//
+//	error: エラーが発生した場合はエラーオブジェクト
+func pushAndSetDefaultBranch(repoName string) error {
+	// main ブランチをリモートにプッシュ
+	pushCmd := exec.Command("git", "push", "-u", "origin", "main")
+	pushCmd.Stdout = os.Stdout
+	pushCmd.Stderr = os.Stderr
+	if err := pushCmd.Run(); err != nil {
+		return fmt.Errorf("mainブランチのプッシュに失敗しました: %w", err)
+	}
+
+	// GitHub でデフォルトブランチを main に設定
+	ghCmd := exec.Command("gh", "repo", "edit", "--default-branch", "main")
+	if output, err := ghCmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("デフォルトブランチの設定に失敗しました: %v: %s", err, string(output))
+	}
+
+	return nil
+}
+
 // launchVSCode は現在のディレクトリで VSCode を起動します。
 //
 // 戻り値:
-//   error: エラーが発生した場合はエラーオブジェクト
+//
+//	error: エラーが発生した場合はエラーオブジェクト
 func launchVSCode() error {
 	codeCmd := exec.Command("code", ".")
 	codeCmd.Stdout = os.Stdout
