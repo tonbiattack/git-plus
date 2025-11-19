@@ -94,7 +94,6 @@ $commands = @(
     "git-pr-checkout",
     "git-clone-org",
     "git-batch-clone",
-    "git-back",
     "git-abort",
     "git-issue-list",
     "git-issue-create",
