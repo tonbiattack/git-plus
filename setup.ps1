@@ -68,6 +68,7 @@ if ($LASTEXITCODE -eq 0) {
 #     main.goがファイル名から "newbranch" コマンドを推測して実行します
 $commands = @(
     "git-newbranch",
+    "git-rename-branch",
     "git-reset-tag",
     "git-amend",
     "git-squash",
@@ -94,6 +95,7 @@ $commands = @(
     "git-clone-org",
     "git-batch-clone",
     "git-back",
+    "git-abort",
     "git-issue-list",
     "git-issue-create",
     "git-issue-edit",

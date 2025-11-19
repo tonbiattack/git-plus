@@ -22,6 +22,31 @@ git newbranch -h                 # ヘルプを表示
 
 存在しないブランチを削除しようとした場合のエラーは無視されるため、安全に再作成できます。
 
+## git rename-branch
+
+現在チェックアウトしているブランチ名を変更します。`--push` を指定すると、リネーム後のブランチを `origin`（必要に応じて `--remote` で任意のリモートを指定）へプッシュして upstream を再設定できます。`--delete-remote` を指定すると古いリモートブランチの削除まで自動化します。
+
+```bash
+git rename-branch feature/renamed
+git rename-branch release/v2 --push
+git rename-branch hotfix/login --push --delete-remote
+git rename-branch feat/ui --remote upstream --push
+```
+
+**処理:**
+1. 現在のブランチ名を取得し、新しいブランチ名と重複していないかを確認
+2. `git branch -m <old> <new>` でローカルブランチをリネーム
+3. `--push` 指定時は `git push --set-upstream <remote> <new>` でリモートにプッシュし upstream を更新
+4. `--delete-remote` 指定時は確認プロンプトの後に `git push <remote> --delete <old>` で古いリモートブランチを削除
+5. `--push` を指定しない場合でも、手動でリモートを更新するためのコマンド例を表示
+
+**オプション:**
+- `--push`: 新しいブランチをリモートにプッシュして upstream を更新
+- `--delete-remote`: リモート上の旧ブランチを削除（--push が必須、確認プロンプトは (y/N)）
+- `--remote`: 更新対象のリモート名を指定（デフォルト: `origin`）
+
+手作業での `git branch -m` やリモート削除の入力ミスを避け、安全にリネームを進めたい場合に便利です。
+
 ## git delete-local-branches
 
 `main` / `master` / `develop` 以外のマージ済みローカルブランチをまとめて削除します。
@@ -107,3 +132,31 @@ git sync -h                 # ヘルプを表示
 **注意事項:**
 - リモートへプッシュ済みのコミットをrebaseすると、履歴が書き換わるため、チームで共有しているブランチでは注意が必要です。
 - コンフリクトが発生した場合は、ファイルを編集してコンフリクトを解消し、`git add`した後に`git sync --continue`を実行してください。
+
+## git abort
+
+進行中の Git 操作（rebase / merge / cherry-pick / revert）を安全に中止します。引数を省略すると現在の状態を自動判定します。
+
+```bash
+git abort                 # 状態を判定して進行中の操作を中止
+git abort merge           # マージを強制的に中止
+git abort rebase          # リベースを強制的に中止
+git abort cherry-pick     # チェリーピックを強制的に中止
+git abort revert          # リバートを強制的に中止
+git abort -h              # ヘルプを表示
+```
+
+**動作:**
+1. 引数がない場合は `.git/rebase-merge` や `MERGE_HEAD` などのインジケーターファイルを確認して進行中の操作を判定します。
+2. `git <操作> --abort` を実行して処理を中止します。
+3. 中止結果を表示します。
+
+**自動判定の対象:**
+- `rebase`: `.git/rebase-apply` または `.git/rebase-merge` が存在する場合
+- `merge`: `.git/MERGE_HEAD` が存在する場合
+- `cherry-pick`: `.git/CHERRY_PICK_HEAD` が存在する場合
+- `revert`: `.git/REVERT_HEAD` が存在する場合
+
+**注意事項:**
+- 操作が検出できない場合はエラーになります。その際はコマンド引数で操作を指定してください。
+- すでに操作が完了している場合は `--abort` が失敗することがあります。Git が表示するメッセージに従ってください。

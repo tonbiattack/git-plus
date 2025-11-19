@@ -21,10 +21,12 @@ Git の日常操作を少しだけ楽にするための拡張コマンド集で�
 ブランチの作成、切り替え、削除、同期など。
 
 - `git newbranch` - ブランチを削除して作り直し、トラッキングブランチとして設定
+- `git rename-branch` - 現在のブランチ名を安全に変更し、--push でリモートも更新
 - `git delete-local-branches` - マージ済みローカルブランチをまとめて削除
 - `git recent` - 最近使用したブランチを時系列で表示して切り替え
 - `git back` - 前のブランチやタグに戻る（`git checkout -` のショートカット）
 - `git sync` - リモートのデフォルトブランチと同期（rebase使用）
+- `git abort` - 進行中の rebase / merge / cherry-pick / revert を自動判定して中止
 
 [詳細はこちら](doc/commands/branch.md)
 
@@ -174,6 +176,7 @@ go build -o ~/bin/git-plus .
 # 各コマンド用のシンボリックリンクを作成
 cd ~/bin
 ln -s git-plus git-newbranch
+ln -s git-plus git-rename-branch
 ln -s git-plus git-reset-tag
 ln -s git-plus git-amend
 ln -s git-plus git-squash
@@ -230,6 +233,7 @@ go build -o "$env:USERPROFILE\bin\git-plus.exe" .
 # 各コマンド用のコピーを作成
 $binPath = "$env:USERPROFILE\bin"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-newbranch.exe"
+Copy-Item "$binPath\git-plus.exe" "$binPath\git-rename-branch.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-reset-tag.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-amend.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-squash.exe"

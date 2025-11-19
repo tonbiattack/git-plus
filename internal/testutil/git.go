@@ -22,7 +22,7 @@ import (
 
 // GitRepo はテスト用の一時Gitリポジトリを表す構造体
 type GitRepo struct {
-	Dir string   // リポジトリのディレクトリパス
+	Dir string // リポジトリのディレクトリパス
 	t   *testing.T
 }
 
@@ -137,10 +137,17 @@ func (r *GitRepo) CreateFile(name, content string) {
 
 	// 親ディレクトリを作成
 	dir := filepath.Dir(path)
+	// パーミッションの意味:
+	// - 0755 (8進数): 所有者に読み/書き/実行 (rwx=7)、
+	//   グループとその他に読み/実行 (r-x=5) を許可します。
+	//   ディレクトリに対しては実行ビット(x)が「入る/検索できる」権限を意味します。
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		r.t.Fatalf("Failed to create directory %s: %v", dir, err)
 	}
 
+	// ファイル作成時のパーミッション:
+	// - 0644 (8進数): 所有者に読み/書き (rw=6)、
+	//   グループとその他に読み (r=4) を許可します。
 	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
 		r.t.Fatalf("Failed to create file %s: %v", name, err)
 	}

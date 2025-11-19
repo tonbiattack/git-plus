@@ -71,6 +71,7 @@ fi
 # （Windows版は実行ファイルのコピーを使用）
 commands=(
     "git-newbranch"
+    "git-rename-branch"
     "git-reset-tag"
     "git-amend"
     "git-squash"
@@ -97,6 +98,7 @@ commands=(
     "git-clone-org"
     "git-batch-clone"
     "git-back"
+    "git-abort"
     "git-issue-list"
     "git-issue-create"
     "git-issue-edit"
