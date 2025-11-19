@@ -24,7 +24,6 @@ Git の日常操作を少しだけ楽にするための拡張コマンド集で�
 - `git rename-branch` - 現在のブランチ名を安全に変更し、--push でリモートも更新
 - `git delete-local-branches` - マージ済みローカルブランチをまとめて削除
 - `git recent` - 最近使用したブランチを時系列で表示して切り替え
-- `git back` - 前のブランチやタグに戻る（`git checkout -` のショートカット）
 - `git sync` - リモートのデフォルトブランチと同期（rebase使用）
 - `git abort` - 進行中の rebase / merge / cherry-pick / revert を自動判定して中止
 
@@ -202,7 +201,6 @@ ln -s git-plus git-browse
 ln -s git-plus git-pr-checkout
 ln -s git-plus git-clone-org
 ln -s git-plus git-batch-clone
-ln -s git-plus git-back
 ln -s git-plus git-issue-list
 ln -s git-plus git-issue-create
 ln -s git-plus git-issue-edit
@@ -260,7 +258,6 @@ Copy-Item "$binPath\git-plus.exe" "$binPath\git-browse.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-pr-checkout.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-clone-org.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-batch-clone.exe"
-Copy-Item "$binPath\git-plus.exe" "$binPath\git-back.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-issue-list.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-issue-create.exe"
 Copy-Item "$binPath\git-plus.exe" "$binPath\git-issue-edit.exe"
