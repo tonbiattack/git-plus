@@ -1,6 +1,8 @@
 package tag
 
 import (
+	"errors"
+	"os/exec"
 	"testing"
 
 	"github.com/tonbiattack/git-plus/cmd"
@@ -344,5 +346,47 @@ func TestVersionTypeAliases(t *testing.T) {
 		if result != "patch" {
 			t.Errorf("%q should normalize to 'patch', got %q", alias, result)
 		}
+	}
+}
+
+// TestIsNoTagsDescribeError は git describe でタグが存在しない場合のエラー判定をテストします
+func TestIsNoTagsDescribeError(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{
+			name: "detects no tags error",
+			err: &exec.ExitError{
+				Stderr: []byte("fatal: No names found, cannot describe anything.\n"),
+			},
+			want: true,
+		},
+		{
+			name: "ignores other exit errors",
+			err: &exec.ExitError{
+				Stderr: []byte("fatal: not a git repository (or any of the parent directories): .git"),
+			},
+			want: false,
+		},
+		{
+			name: "ignores generic errors",
+			err:  errors.New("some other error"),
+			want: false,
+		},
+		{
+			name: "nil error",
+			err:  nil,
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isNoTagsDescribeError(tt.err); got != tt.want {
+				t.Fatalf("isNoTagsDescribeError() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
