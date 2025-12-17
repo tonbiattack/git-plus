@@ -42,6 +42,7 @@ package tag
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os/exec"
 	"regexp"
@@ -53,6 +54,8 @@ import (
 	"github.com/tonbiattack/git-plus/internal/ui"
 )
 
+const initialVersionTag = "v0.0.0"
+
 var (
 	tagMessage           string // タグメッセージ（アノテーテッドタグ用）
 	tagPush              bool   // 作成後に自動的にリモートへプッシュするフラグ
@@ -60,6 +63,7 @@ var (
 	tagRelease           bool   // プッシュ後に自動的にGitHubリリースを作成するフラグ
 	tagReleaseDraft      bool   // リリースをドラフトとして作成するフラグ
 	tagReleasePrerelease bool   // リリースをプレリリースとして作成するフラグ
+	errNoGitTags         = errors.New("git repository has no tags")
 )
 
 // newTagCmd は new-tag コマンドの定義です。
@@ -85,9 +89,13 @@ var newTagCmd = &cobra.Command{
 		// 最新タグを取得
 		currentTag, err := getLatestTag()
 		if err != nil {
-			fmt.Println("エラー: 最新タグの取得に失敗しました")
-			fmt.Println("タグが存在しない可能性があります。最初のタグを手動で作成してください。")
-			return err
+			if errors.Is(err, errNoGitTags) {
+				fmt.Printf("既存のタグが見つからないため、初期タグ %s から新しいタグを計算します。\n", initialVersionTag)
+				currentTag = initialVersionTag
+			} else {
+				fmt.Println("エラー: 最新タグの取得に失敗しました")
+				return err
+			}
 		}
 
 		// バージョンを解析
@@ -197,9 +205,32 @@ func getLatestTag() (string, error) {
 	cmd := exec.Command("git", "describe", "--tags", "--abbrev=0")
 	output, err := cmd.Output()
 	if err != nil {
+		if isNoTagsDescribeError(err) {
+			return "", errNoGitTags
+		}
 		return "", err
 	}
 	return strings.TrimSpace(string(output)), nil
+}
+
+// isNoTagsDescribeError は git describe の結果が「タグが存在しない」場合を判定します。
+//
+// パラメータ:
+//   - err: git describe 実行時に発生したエラー
+//
+// 戻り値:
+//   - bool: エラーがタグ未作成によるものなら true
+func isNoTagsDescribeError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
+		stderr := string(exitErr.Stderr)
+		return strings.Contains(stderr, "No names found, cannot describe anything.")
+	}
+	return false
 }
 
 // extractVersion はタグからバージョン番号を抽出します。
