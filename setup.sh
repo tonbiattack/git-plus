@@ -69,47 +69,45 @@ fi
 #
 # シンボリックリンクを使用することで、ディスク容量を節約できます
 # （Windows版は実行ファイルのコピーを使用）
-commands=(
-    "git-newbranch"
-    "git-rename-branch"
-    "git-reset-tag"
-    "git-amend"
-    "git-squash"
-    "git-track"
-    "git-delete-local-branches"
-    "git-undo-last-commit"
-    "git-tag-diff"
-    "git-tag-diff-all"
-    "git-tag-checkout"
-    "git-stash-cleanup"
-    "git-stash-select"
-    "git-recent"
-    "git-step"
-    "git-sync"
-    "git-pr-create-merge"
-    "git-pr-merge"
-    "git-pr-list"
-    "git-pause"
-    "git-resume"
-    "git-create-repository"
-    "git-new-tag"
-    "git-browse"
-    "git-pr-checkout"
-    "git-clone-org"
-    "git-batch-clone"
-    "git-abort"
-    "git-issue-list"
-    "git-issue-create"
-    "git-issue-edit"
-    "git-issue-bulk-close"
-    "git-release-notes"
-    "git-repo-others"
-    "git-pr-browse"
-    "git-pr-issue-link"
-    "git-worktree-new"
-    "git-worktree-switch"
-    "git-worktree-delete"
-)
+commands="git-newbranch
+git-rename-branch
+git-reset-tag
+git-amend
+git-squash
+git-track
+git-delete-local-branches
+git-undo-last-commit
+git-tag-diff
+git-tag-diff-all
+git-tag-checkout
+git-stash-cleanup
+git-stash-select
+git-recent
+git-step
+git-sync
+git-pr-create-merge
+git-pr-merge
+git-pr-list
+git-pause
+git-resume
+git-create-repository
+git-new-tag
+git-browse
+git-pr-checkout
+git-clone-org
+git-batch-clone
+git-abort
+git-issue-list
+git-issue-create
+git-issue-edit
+git-issue-bulk-close
+git-release-notes
+git-repo-others
+git-pr-browse
+git-pr-issue-link
+git-worktree-new
+git-worktree-switch
+git-worktree-delete"
 
 echo ""
 echo "シンボリックリンクを作成中..."
@@ -119,7 +117,7 @@ echo ""
 success_count=0
 
 # 各コマンド用にシンボリックリンクを作成
-for cmd in "${commands[@]}"; do
+for cmd in $commands; do
     printf "  作成中: %-30s " "$cmd..."
 
     # 既存のシンボリックリンクやファイルを削除（クリーンインストール）
@@ -128,7 +126,7 @@ for cmd in "${commands[@]}"; do
     # git-plus へのシンボリックリンクを作成
     if ln -s "$BIN_PATH/git-plus" "$BIN_PATH/$cmd" 2>/dev/null; then
         echo "✓ OK"
-        ((success_count++))
+        success_count=$((success_count + 1))
     else
         echo "✗ FAILED"
     fi
@@ -161,25 +159,28 @@ fi
 
 # binディレクトリが既にPATHに含まれているか確認
 # コロンで囲んで検索することで、部分一致を防ぎます
-if [[ ":$PATH:" != *":$BIN_PATH:"* ]]; then
-    echo "PATHに追加中: $BIN_PATH"
+case ":$PATH:" in
+    *":$BIN_PATH:"*)
+        echo "✓ 既にPATHに含まれています"
+        ;;
+    *)
+        echo "PATHに追加中: $BIN_PATH"
 
-    # シェル設定ファイルにPATH設定を追記
-    echo "" >> "$SHELL_RC"
-    echo "# Git extension commands" >> "$SHELL_RC"
-    echo "export PATH=\"\$HOME/bin:\$PATH\"" >> "$SHELL_RC"
+        # シェル設定ファイルにPATH設定を追記
+        echo "" >> "$SHELL_RC"
+        echo "# Git extension commands" >> "$SHELL_RC"
+        echo "export PATH=\"\$HOME/bin:\$PATH\"" >> "$SHELL_RC"
 
-    # 現在のシェルセッションにも即座に反映
-    # これにより、スクリプト実行後すぐにコマンドを使用可能になります
-    export PATH="$BIN_PATH:$PATH"
+        # 現在のシェルセッションにも即座に反映
+        # これにより、スクリプト実行後すぐにコマンドを使用可能になります
+        export PATH="$BIN_PATH:$PATH"
 
-    echo "✓ $SHELL_RC にPATHを追加しました"
-    echo ""
-    echo -e "\033[36m注意: 新しいターミナルセッションで有効になります\033[0m"
-    echo -e "\033[36m      または 'source $SHELL_RC' を実行してください\033[0m"
-else
-    echo "✓ 既にPATHに含まれています"
-fi
+        echo "✓ $SHELL_RC にPATHを追加しました"
+        echo ""
+        echo -e "\033[36m注意: 新しいターミナルセッションで有効になります\033[0m"
+        echo -e "\033[36m      または 'source $SHELL_RC' を実行してください\033[0m"
+        ;;
+esac
 
 # ================================================================================
 # セットアップ完了メッセージと使用例
