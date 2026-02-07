@@ -152,6 +152,12 @@ cd git-plus
 .\setup.ps1
 ```
 
+**Windows (PowerShell が使えない場合 / CMD) の場合:**
+
+```bat
+setup.cmd
+```
+
 セットアップスクリプトは以下を自動的に行います：
 - git-plus バイナリのビルド
 - `~/bin`（Windows: `%USERPROFILE%\bin`）への配置
