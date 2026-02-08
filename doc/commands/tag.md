@@ -107,10 +107,11 @@ git new-tag -h               # ヘルプを表示
 | `patch`, `p`, `bug`, `b`, `fix` | パッチバージョンアップ | v1.2.4 |
 
 **オプション:**
-- `-m, --message <msg>`: タグメッセージを指定（アノテーテッドタグを作成）
+- `-m, --message <msg>`: タグメッセージを指定（未指定時はデフォルトメッセージ）
 - `-p, --push`: 作成後に自動的にリモートへプッシュ
 - `-d, --dry-run`: 実際には作成せず、次のバージョンだけを表示
 - `-r, --release`: プッシュ後に自動的にGitHubリリースを作成
+- `--release-note <msg>`: リリースノートに追加する1行（未指定時は当日の日付）
 - `-D, --release-draft`: リリースをドラフトとして作成
 - `-P, --release-prerelease`: リリースをプレリリースとして作成
 
@@ -123,11 +124,13 @@ git new-tag feature
 # 新しいタグ: v1.3.0 (MINOR)
 # タグを作成しますか？ (y/N): y
 # ✓ タグを作成しました: v1.3.0
+# 差分リンク: https://github.com/owner/repo/compare/v1.2.3...v1.3.0
 
 # バグ修正のタグを作成してプッシュ
 git new-tag bug --push
 # ✓ タグを作成しました: v1.2.4
 # ✓ リモートにプッシュしました: v1.2.4
+# 差分リンク: https://github.com/owner/repo/compare/v1.2.3...v1.2.4
 
 # 省略形を使用
 git new-tag f              # feature と同じ
@@ -151,9 +154,10 @@ git new-tag
 # 選択 (1-3): 2
 
 # タグ作成、プッシュ、リリース作成を一度に実行
-git new-tag feature --push --release
+git new-tag feature --push --release --release-note "2026-02-08 / PROJ-1234"
 # ✓ タグを作成しました: v1.3.0
 # ✓ リモートにプッシュしました: v1.3.0
+# 差分リンク: https://github.com/owner/repo/compare/v1.2.3...v1.3.0
 #
 # GitHubリリースを作成中...
 # ✓ GitHubリリースを作成しました
@@ -171,9 +175,11 @@ git new-tag minor --push --release --release-prerelease
 2. バージョン番号を解析（v1.2.3 → MAJOR=1, MINOR=2, PATCH=3）
 3. 指定されたタイプに応じて新しいバージョンを計算
 4. 確認プロンプトを表示
-5. タグを作成（メッセージありの場合はアノテーテッドタグ）
-6. `--push` オプションがある場合はリモートへプッシュ
-7. `--release` オプションがある場合はGitHubリリースを作成（`gh release create --generate-notes`）
+5. タグを作成（アノテーテッドタグを常に作成）
+6. 直前タグとの差分リンクを表示（GitHubリポジトリの場合のみ）
+7. `--release-note` 未指定時は当日の日付（`YYYY-MM-DD`）を先頭に追加
+8. `--push` オプションがある場合はリモートへプッシュ
+9. `--release` オプションがある場合はGitHubリリースを作成（`gh release create --generate-notes`）
 
 **注意事項:**
 - タグが存在しない場合はエラーになります。最初のタグは手動で作成してください（例: `git tag v0.1.0`）
@@ -182,3 +188,5 @@ git new-tag minor --push --release --release-prerelease
 - リリース作成には `--push` オプションが必要です（タグがリモートにプッシュされている必要があるため）
 - リリース作成には GitHub CLI (gh) がインストールされ、ログイン済みである必要があります
 - 対話モードでは、タグをプッシュした後に「GitHubリリースを作成しますか？」という確認プロンプトが表示されます
+- 差分リンクは GitHub の origin リモートが設定されている場合のみ表示されます
+- リリースノートの追加は `--release-note` 未指定時は当日の日付が自動で入ります

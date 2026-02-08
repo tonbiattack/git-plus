@@ -48,6 +48,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/tonbiattack/git-plus/cmd"
@@ -63,6 +64,7 @@ var (
 	tagRelease           bool   // プッシュ後に自動的にGitHubリリースを作成するフラグ
 	tagReleaseDraft      bool   // リリースをドラフトとして作成するフラグ
 	tagReleasePrerelease bool   // リリースをプレリリースとして作成するフラグ
+	tagReleaseNote       string // リリースノートに追加する1行（例: 2026-02-08 / PROJ-1234）
 	errNoGitTags         = errors.New("git repository has no tags")
 )
 
@@ -84,14 +86,17 @@ var newTagCmd = &cobra.Command{
   git new-tag bug -m "Fix issue"   # メッセージ付きで作成
   git new-tag minor --dry-run      # 確認のみ
   git new-tag feature --push --release              # タグ作成、プッシュ、リリース作成
-  git new-tag bug --push --release --release-draft  # ドラフトリリースとして作成`,
+  git new-tag bug --push --release --release-draft  # ドラフトリリースとして作成
+  git new-tag minor --push --release --release-note "2026-02-08 / PROJ-1234"`,
 	RunE: func(c *cobra.Command, args []string) error {
 		// 最新タグを取得
+		hasExistingTag := true
 		currentTag, err := getLatestTag()
 		if err != nil {
 			if errors.Is(err, errNoGitTags) {
 				fmt.Printf("既存のタグが見つからないため、初期タグ %s から新しいタグを計算します。\n", initialVersionTag)
 				currentTag = initialVersionTag
+				hasExistingTag = false
 			} else {
 				fmt.Println("エラー: 最新タグの取得に失敗しました")
 				return err
@@ -126,10 +131,14 @@ var newTagCmd = &cobra.Command{
 		newMajor, newMinor, newPatch := computeNewVersion(major, minor, patch, versionType)
 		newTag := fmt.Sprintf("v%d.%d.%d", newMajor, newMinor, newPatch)
 		versionTypeDisplay := strings.ToUpper(versionType)
+		resolvedMessage := resolveTagMessage(newTag, tagMessage)
 
 		fmt.Printf("新しいタグ: %s (%s)\n", newTag, versionTypeDisplay)
-		if tagMessage != "" {
-			fmt.Printf("メッセージ: %s\n", tagMessage)
+		fmt.Printf("メッセージ: %s\n", resolvedMessage)
+
+		// 直前タグとの差分リンクを表示（GitHubリポジトリの場合のみ）
+		if hasExistingTag {
+			printGitHubCompareLink(currentTag, newTag)
 		}
 
 		// --dry-run の場合はここで終了
@@ -145,7 +154,7 @@ var newTagCmd = &cobra.Command{
 		}
 
 		// タグを作成
-		if err := makeTag(newTag, tagMessage); err != nil {
+		if err := makeTag(newTag, resolvedMessage); err != nil {
 			return fmt.Errorf("タグの作成に失敗: %w", err)
 		}
 
@@ -182,6 +191,9 @@ var newTagCmd = &cobra.Command{
 				fmt.Printf("\nGitHubリリースを作成中...\n")
 				if err := createReleaseFromTag(newTag, tagReleaseDraft, tagReleasePrerelease); err != nil {
 					return fmt.Errorf("リリースの作成に失敗: %w", err)
+				}
+				if err := prependReleaseNoteIfNeeded(newTag, tagReleaseNote); err != nil {
+					return fmt.Errorf("リリースノートの更新に失敗: %w", err)
 				}
 				fmt.Printf("✓ GitHubリリースを作成しました\n")
 				fmt.Printf("詳細を確認するには: gh release view %s --web\n", newTag)
@@ -368,27 +380,20 @@ func interactiveVersionSelection(major, minor, patch int) string {
 	}
 }
 
-// makeTag は指定されたタグを作成します。
+// makeTag は指定されたタグをアノテーテッドタグとして作成します。
 //
 // パラメータ:
 //   - tag: 作成するタグ名（例: v1.2.3）
-//   - message: タグメッセージ（空文字列の場合は軽量タグを作成）
+//   - message: タグメッセージ（空文字列は不可）
 //
 // 戻り値:
 //   - error: タグの作成に失敗した場合のエラー情報
 //
 // 内部処理:
 //
-//	メッセージが指定されている場合は git tag -a <tag> -m <message> で
-//	アノテーテッドタグを作成し、そうでない場合は git tag <tag> で
-//	軽量タグを作成します。
+//	git tag -a <tag> -m <message> でアノテーテッドタグを作成します。
 func makeTag(tag, message string) error {
-	var cmd *exec.Cmd
-	if message != "" {
-		cmd = exec.Command("git", "tag", "-a", tag, "-m", message)
-	} else {
-		cmd = exec.Command("git", "tag", tag)
-	}
+	cmd := exec.Command("git", "tag", "-a", tag, "-m", message)
 	return cmd.Run()
 }
 
@@ -462,6 +467,148 @@ func createReleaseFromTag(tag string, draft, prerelease bool) error {
 	return nil
 }
 
+// prependReleaseNoteIfNeeded はリリースノートに1行追加します。
+func prependReleaseNoteIfNeeded(tag, note string) error {
+	line := resolveReleaseNote(note)
+
+	body, err := getReleaseNotesBody(tag)
+	if err != nil {
+		return err
+	}
+
+	updated := buildReleaseNotesWithPrefix(body, line)
+	return updateReleaseNotesBody(tag, updated)
+}
+
+// resolveReleaseNote はリリースノートに追加する1行を決定します。
+//
+// パラメータ:
+//   - note: ユーザー指定のノート
+//
+// 戻り値:
+//   - string: 追加する1行（未指定時は当日の日付）
+func resolveReleaseNote(note string) string {
+	trimmed := strings.TrimSpace(note)
+	if trimmed != "" {
+		return trimmed
+	}
+	return time.Now().Format("2006-01-02")
+}
+
+// buildReleaseNotesWithPrefix は既存ノートに1行追加した本文を生成します。
+func buildReleaseNotesWithPrefix(existing, prefixLine string) string {
+	existing = strings.TrimSpace(existing)
+	prefixLine = strings.TrimSpace(prefixLine)
+
+	if existing == "" {
+		return prefixLine
+	}
+	if prefixLine == "" {
+		return existing
+	}
+	return fmt.Sprintf("%s\n\n%s", prefixLine, existing)
+}
+
+// getReleaseNotesBody は既存のリリースノート本文を取得します。
+func getReleaseNotesBody(tag string) (string, error) {
+	cmd := exec.Command("gh", "release", "view", tag, "--json", "body", "-q", ".body")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(output)), nil
+}
+
+// updateReleaseNotesBody はリリースノート本文を更新します。
+func updateReleaseNotesBody(tag, body string) error {
+	cmd := exec.Command("gh", "release", "edit", tag, "--notes", body)
+	return cmd.Run()
+}
+
+// resolveTagMessage はアノテーテッドタグ用のメッセージを決定します。
+//
+// パラメータ:
+//   - tag: 作成するタグ名
+//   - message: ユーザー指定のメッセージ
+//
+// 戻り値:
+//   - string: 使用するメッセージ（空文字列は返さない）
+func resolveTagMessage(tag, message string) string {
+	trimmed := strings.TrimSpace(message)
+	if trimmed != "" {
+		return trimmed
+	}
+	return fmt.Sprintf("Release %s", tag)
+}
+
+// printGitHubCompareLink は直前タグとの差分リンクを表示します。
+func printGitHubCompareLink(fromTag, toTag string) {
+	originURL, err := getOriginURL()
+	if err != nil {
+		fmt.Printf("差分リンクを生成できませんでした: origin URL の取得に失敗 (%v)\n", err)
+		return
+	}
+
+	compareURL, err := buildGitHubCompareURL(originURL, fromTag, toTag)
+	if err != nil {
+		fmt.Printf("差分リンクを生成できませんでした: %v\n", err)
+		return
+	}
+
+	fmt.Printf("差分リンク: %s\n", compareURL)
+}
+
+// getOriginURL は origin のリモートURLを取得します。
+func getOriginURL() (string, error) {
+	cmd := exec.Command("git", "remote", "get-url", "origin")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(output)), nil
+}
+
+// buildGitHubCompareURL は GitHub の差分リンクを生成します。
+//
+// パラメータ:
+//   - originURL: origin のリモートURL
+//   - fromTag: 比較元のタグ
+//   - toTag: 比較先のタグ
+//
+// 戻り値:
+//   - string: GitHubの差分リンク
+//   - error: GitHub URL でない場合など
+func buildGitHubCompareURL(originURL, fromTag, toTag string) (string, error) {
+	owner, repo, err := parseGitHubOriginURL(originURL)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("https://github.com/%s/%s/compare/%s...%s", owner, repo, fromTag, toTag), nil
+}
+
+// parseGitHubOriginURL は GitHub の origin URL から owner/repo を抽出します。
+func parseGitHubOriginURL(originURL string) (string, string, error) {
+	url := strings.TrimSpace(originURL)
+	url = strings.TrimSuffix(url, ".git")
+
+	var ownerRepo string
+	switch {
+	case strings.HasPrefix(url, "https://github.com/"):
+		ownerRepo = strings.TrimPrefix(url, "https://github.com/")
+	case strings.HasPrefix(url, "git@github.com:"):
+		ownerRepo = strings.TrimPrefix(url, "git@github.com:")
+	default:
+		return "", "", fmt.Errorf("GitHub URL ではありません: %s", originURL)
+	}
+
+	parts := strings.Split(ownerRepo, "/")
+	if len(parts) != 2 {
+		return "", "", fmt.Errorf("無効な GitHub URL: %s", originURL)
+	}
+
+	return parts[0], parts[1], nil
+}
+
 // init は new-tag コマンドを RootCmd に登録し、フラグを設定します。
 // この関数はパッケージの初期化時に自動的に呼び出されます。
 //
@@ -474,11 +621,12 @@ func createReleaseFromTag(tag string, draft, prerelease bool) error {
 //	--release-draft: リリースをドラフトとして作成
 //	--release-prerelease: リリースをプレリリースとして作成
 func init() {
-	newTagCmd.Flags().StringVarP(&tagMessage, "message", "m", "", "タグメッセージを指定（アノテーテッドタグを作成）")
+	newTagCmd.Flags().StringVarP(&tagMessage, "message", "m", "", "タグメッセージを指定（未指定時はデフォルトメッセージ）")
 	newTagCmd.Flags().BoolVarP(&tagPush, "push", "p", false, "作成後に自動的にリモートへプッシュ")
 	newTagCmd.Flags().BoolVarP(&tagDryRun, "dry-run", "d", false, "実際には作成せず、次のバージョンだけを表示")
 	newTagCmd.Flags().BoolVarP(&tagRelease, "release", "r", false, "プッシュ後に自動的にGitHubリリースを作成")
 	newTagCmd.Flags().BoolVarP(&tagReleaseDraft, "release-draft", "D", false, "リリースをドラフトとして作成")
 	newTagCmd.Flags().BoolVarP(&tagReleasePrerelease, "release-prerelease", "P", false, "リリースをプレリリースとして作成")
+	newTagCmd.Flags().StringVar(&tagReleaseNote, "release-note", "", "リリースノートに追加する1行（例: 2026-02-08 / PROJ-1234）")
 	cmd.RootCmd.AddCommand(newTagCmd)
 }

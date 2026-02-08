@@ -48,6 +48,7 @@ func TestNewTagCmdFlags(t *testing.T) {
 		{"release flag", "release", "r"},
 		{"release-draft flag", "release-draft", "D"},
 		{"release-prerelease flag", "release-prerelease", "P"},
+		{"release-note flag", "release-note", ""},
 	}
 
 	for _, tt := range tests {
@@ -388,5 +389,176 @@ func TestIsNoTagsDescribeError(t *testing.T) {
 				t.Fatalf("isNoTagsDescribeError() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+// TestResolveTagMessage はタグメッセージの解決ロジックをテストします
+func TestResolveTagMessage(t *testing.T) {
+	tests := []struct {
+		name     string
+		tag      string
+		message  string
+		expected string
+	}{
+		{
+			name:     "custom message",
+			tag:      "v1.2.3",
+			message:  "Release notes",
+			expected: "Release notes",
+		},
+		{
+			name:     "trimmed message",
+			tag:      "v1.2.3",
+			message:  "  Custom  ",
+			expected: "Custom",
+		},
+		{
+			name:     "default message when empty",
+			tag:      "v1.2.3",
+			message:  "",
+			expected: "Release v1.2.3",
+		},
+		{
+			name:     "default message when whitespace",
+			tag:      "v1.2.3",
+			message:  "   ",
+			expected: "Release v1.2.3",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := resolveTagMessage(tt.tag, tt.message); got != tt.expected {
+				t.Errorf("resolveTagMessage(%q, %q) = %q, want %q", tt.tag, tt.message, got, tt.expected)
+			}
+		})
+	}
+}
+
+// TestParseGitHubOriginURL は GitHub origin URL の解析をテストします
+func TestParseGitHubOriginURL(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		wantOwner string
+		wantRepo  string
+		expectErr bool
+	}{
+		{
+			name:      "https url",
+			input:     "https://github.com/example/project.git",
+			wantOwner: "example",
+			wantRepo:  "project",
+			expectErr: false,
+		},
+		{
+			name:      "ssh url",
+			input:     "git@github.com:example/project.git",
+			wantOwner: "example",
+			wantRepo:  "project",
+			expectErr: false,
+		},
+		{
+			name:      "https url without .git",
+			input:     "https://github.com/example/project",
+			wantOwner: "example",
+			wantRepo:  "project",
+			expectErr: false,
+		},
+		{
+			name:      "non github url",
+			input:     "https://gitlab.com/example/project.git",
+			expectErr: true,
+		},
+		{
+			name:      "invalid format",
+			input:     "https://github.com/example",
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			owner, repo, err := parseGitHubOriginURL(tt.input)
+			if tt.expectErr {
+				if err == nil {
+					t.Fatalf("parseGitHubOriginURL(%q) expected error", tt.input)
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("parseGitHubOriginURL(%q) unexpected error: %v", tt.input, err)
+			}
+
+			if owner != tt.wantOwner {
+				t.Errorf("owner = %q, want %q", owner, tt.wantOwner)
+			}
+			if repo != tt.wantRepo {
+				t.Errorf("repo = %q, want %q", repo, tt.wantRepo)
+			}
+		})
+	}
+}
+
+// TestBuildGitHubCompareURL は差分リンク生成をテストします
+func TestBuildGitHubCompareURL(t *testing.T) {
+	url, err := buildGitHubCompareURL("https://github.com/example/project.git", "v1.2.3", "v1.2.4")
+	if err != nil {
+		t.Fatalf("buildGitHubCompareURL returned error: %v", err)
+	}
+
+	expected := "https://github.com/example/project/compare/v1.2.3...v1.2.4"
+	if url != expected {
+		t.Errorf("compare url = %q, want %q", url, expected)
+	}
+}
+
+// TestBuildReleaseNotesWithPrefix はリリースノートの組み立てをテストします
+func TestBuildReleaseNotesWithPrefix(t *testing.T) {
+	tests := []struct {
+		name     string
+		existing string
+		prefix   string
+		want     string
+	}{
+		{
+			name:     "prepend to existing",
+			existing: "Auto notes",
+			prefix:   "2026-02-08 / PROJ-1234",
+			want:     "2026-02-08 / PROJ-1234\n\nAuto notes",
+		},
+		{
+			name:     "existing empty",
+			existing: "",
+			prefix:   "2026-02-08 / PROJ-1234",
+			want:     "2026-02-08 / PROJ-1234",
+		},
+		{
+			name:     "prefix empty",
+			existing: "Auto notes",
+			prefix:   "",
+			want:     "Auto notes",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := buildReleaseNotesWithPrefix(tt.existing, tt.prefix); got != tt.want {
+				t.Errorf("buildReleaseNotesWithPrefix() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestResolveReleaseNote はリリースノートのデフォルト設定をテストします
+func TestResolveReleaseNote(t *testing.T) {
+	if got := resolveReleaseNote("2026-02-08 / PROJ-1234"); got != "2026-02-08 / PROJ-1234" {
+		t.Errorf("resolveReleaseNote(custom) = %q", got)
+	}
+
+	got := resolveReleaseNote("")
+	if got == "" {
+		t.Error("resolveReleaseNote(empty) should not be empty")
 	}
 }
