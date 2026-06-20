@@ -448,6 +448,55 @@ Remove-Item "$binPath\git-worktree-delete.exe" -ErrorAction SilentlyContinue
 
 削除後にシェル版を入れる場合は、シェル版リポジトリ側の README に従って `git-plus` / `git-*` を `PATH` 上に配置してください。
 
+### シェル版が有効か確認する
+
+Go 版を削除したあとにシェル版へ切り替えた場合は、`git` がどの `git-*` を拾っているかを確認してください。
+
+**Linux / macOS / Git Bash:**
+
+```bash
+# git newbranch がどの実体を呼ぶか確認
+type -a git-newbranch
+which git-newbranch
+
+# PATH にシェル版の配置先が入っているか確認
+echo "$PATH"
+
+# 実際にヘルプが出るか確認
+git newbranch -h
+git tag-diff-all -h
+```
+
+確認ポイント:
+- `type -a git-newbranch` / `which git-newbranch` の結果が、シェル版を置いたディレクトリを指していること
+- `echo "$PATH"` に、シェル版を置いたディレクトリが含まれていること
+  - 例: `/c/apps/git-plus-sh`
+  - 例: `$HOME/bin`
+
+**Windows (PowerShell):**
+
+```powershell
+# git newbranch がどの実体を呼ぶか確認
+Get-Command git-newbranch
+where.exe git-newbranch
+
+# PATH を確認
+$env:Path
+[Environment]::GetEnvironmentVariable("Path", "User")
+
+# 実際にヘルプが出るか確認
+git newbranch -h
+git tag-diff-all -h
+```
+
+確認ポイント:
+- `Get-Command git-newbranch` / `where.exe git-newbranch` の結果が、シェル版を置いたディレクトリを指していること
+- `$env:Path` またはユーザー環境変数 `Path` に、シェル版を置いたディレクトリが含まれていること
+  - 例: `C:\apps\git-plus-sh`
+  - 例: `%USERPROFILE%\bin`
+
+もし `git newbranch -h` がまだ Go 版の挙動を示す、あるいは別の場所の `git-newbranch` を拾っている場合は、`where.exe git-newbranch` / `which git-newbranch` の結果を見て、古い配置物が残っていないか確認してください。
+
 **Linux / macOS:**
 
 ```bash
