@@ -344,6 +344,110 @@ Windows で PowerShell を利用している場合は、`./bin/git-plus` の代�
 
 ## アンインストール
 
+### シェル版へ移行するために Go 版を削除する
+
+この Go 版 (`git-plus` バイナリ + `git-*.exe` / `git-*` リンク) をやめて、シェル版へ切り替える場合は、先に Go 版の配布物を消しておくと混在を避けられます。
+
+**Linux / macOS:**
+
+```bash
+# Go 版の実体とシンボリックリンクを削除
+rm -f ~/bin/git-plus
+rm -f ~/bin/git-newbranch
+rm -f ~/bin/git-rename-branch
+rm -f ~/bin/git-reset-tag
+rm -f ~/bin/git-amend
+rm -f ~/bin/git-squash
+rm -f ~/bin/git-track
+rm -f ~/bin/git-delete-local-branches
+rm -f ~/bin/git-undo-last-commit
+rm -f ~/bin/git-tag-diff
+rm -f ~/bin/git-tag-diff-all
+rm -f ~/bin/git-tag-checkout
+rm -f ~/bin/git-stash-cleanup
+rm -f ~/bin/git-stash-select
+rm -f ~/bin/git-recent
+rm -f ~/bin/git-step
+rm -f ~/bin/git-sync
+rm -f ~/bin/git-pr-create-merge
+rm -f ~/bin/git-pr-merge
+rm -f ~/bin/git-pr-list
+rm -f ~/bin/git-pause
+rm -f ~/bin/git-resume
+rm -f ~/bin/git-create-repository
+rm -f ~/bin/git-new-tag
+rm -f ~/bin/git-browse
+rm -f ~/bin/git-pr-checkout
+rm -f ~/bin/git-clone-org
+rm -f ~/bin/git-batch-clone
+rm -f ~/bin/git-abort
+rm -f ~/bin/git-issue-list
+rm -f ~/bin/git-issue-create
+rm -f ~/bin/git-issue-edit
+rm -f ~/bin/git-issue-bulk-close
+rm -f ~/bin/git-release-notes
+rm -f ~/bin/git-repo-others
+rm -f ~/bin/git-pr-browse
+rm -f ~/bin/git-pr-issue-link
+rm -f ~/bin/git-worktree-new
+rm -f ~/bin/git-worktree-switch
+rm -f ~/bin/git-worktree-delete
+```
+
+`setup.sh` が追記した `~/.bashrc` / `~/.zshrc` / `~/.profile` の `export PATH="$HOME/bin:$PATH"` は、`~/bin` を他でも使っていなければ削除してください。
+
+**Windows (PowerShell):**
+
+```powershell
+$binPath = "$env:USERPROFILE\bin"
+
+# Go 版の実体とコピーを削除
+Remove-Item "$binPath\git-plus.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-newbranch.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-rename-branch.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-reset-tag.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-amend.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-squash.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-track.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-delete-local-branches.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-undo-last-commit.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-tag-diff.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-tag-diff-all.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-tag-checkout.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-stash-cleanup.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-stash-select.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-recent.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-step.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-sync.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-pr-create-merge.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-pr-merge.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-pr-list.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-pause.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-resume.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-create-repository.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-new-tag.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-browse.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-pr-checkout.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-clone-org.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-batch-clone.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-abort.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-issue-list.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-issue-create.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-issue-edit.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-issue-bulk-close.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-release-notes.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-repo-others.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-pr-browse.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-pr-issue-link.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-worktree-new.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-worktree-switch.exe" -ErrorAction SilentlyContinue
+Remove-Item "$binPath\git-worktree-delete.exe" -ErrorAction SilentlyContinue
+```
+
+必要ならユーザー環境変数 `Path` から `$env:USERPROFILE\bin` を手動で外してください。`bin` を他用途でも使っているなら、そのままで問題ありません。
+
+削除後にシェル版を入れる場合は、シェル版リポジトリ側の README に従って `git-plus` / `git-*` を `PATH` 上に配置してください。
+
 **Linux / macOS:**
 
 ```bash
